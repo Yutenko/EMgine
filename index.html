@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,10 @@
   <link rel="stylesheet" href="ui/ui-toolbar.css">
   <link rel="stylesheet" href="ui/ui-panel-layers.css">
   <link rel="stylesheet" href="ui/ui-canvas-input.css">
+  <link rel="stylesheet" href="ui/ui-selection.css">
+
 </head>
+
 <body>
   <canvas id="canvas"></canvas>
 
@@ -28,32 +32,34 @@
   <script src="ui/ui-canvas-input.js"></script>
   <script src="ui/ui-rulers.js"></script>
   <script src="ui/ui-toolbar.js"></script>
+  <script src="ui/ui-selection.js"></script>
 
   <script>
-  (function(){
-    function boot(){
-      var canvas = document.getElementById('canvas');
-      if (!canvas){ console.error('[boot] no canvas'); return; }
-      var editor = new Editor(canvas, {cols:64, rows:64, tileSize:32, chunkTiles:32});
-      editor.opts = {cols:64, rows:64, tileSize:32, chunkTiles:32};
+    (function () {
+      function boot() {
+        var canvas = document.getElementById('canvas');
+        if (!canvas) {console.error('[boot] no canvas'); return;}
+        var editor = new Editor(canvas, {cols: 64, rows: 64, tileSize: 32, chunkTiles: 32});
+        editor.opts = {cols: 64, rows: 64, tileSize: 32, chunkTiles: 32};
 
-      // Register core modules
-      editor.use(EditorWorld);
-      editor.use(EditorCamera);
-      editor.use(EditorGrid);
-      editor.use(EditorHistory);
-      editor.use(EditorLevels);
-      editor.use(EditorChunks);
-      editor.use(EditorUnderlay);
-      editor.use(EditorRender);
+        // Register core modules
+        editor.use(EditorWorld);
+        editor.use(EditorCamera);
+        editor.use(EditorGrid);
+        editor.use(EditorHistory);
+        editor.use(EditorLevels);
+        editor.use(EditorChunks);
+        editor.use(EditorUnderlay);
+        editor.use(EditorRender);
 
-      window.editor = editor;
-      document.dispatchEvent(new CustomEvent('editor:ready', {detail:{editor:editor}}));
-      console.log('[boot] editor ready');
-    }
-    if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
-    else boot();
-  })();
+        window.editor = editor;
+        document.dispatchEvent(new CustomEvent('editor:ready', {detail: {editor: editor}}));
+        console.log('[boot] editor ready');
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
   </script>
 </body>
+
 </html>

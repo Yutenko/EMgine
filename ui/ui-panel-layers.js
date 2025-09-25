@@ -1,125 +1,145 @@
-// ui-panel-layers.js – Level/Layer Panel (ES5)
+// ui-panel-layers.js – classic panel + hover highlight (calls setHoverLayer on hover)
 (function(){
   function onReady(){
-    if (!window.editor){
-      document.addEventListener("editor:ready", onReady, {once:true});
-      return;
-    }
     var editor = window.editor;
+    if (!editor){ document.addEventListener("editor:ready", onReady, {once:true}); return; }
 
-    var panel = document.createElement("div");
-    panel.id = "level-panel";
-    document.body.appendChild(panel);
-
-    var title = document.createElement("div");
-    title.className = "lp-title";
-    title.textContent = "Level & Layers";
-    panel.appendChild(title);
-
-    var status = document.createElement("div");
-    status.id = "lp-status";
-    status.className = "lp-row small";
-    status.innerHTML = 'Aktiver Layer: <strong id="lp-active-name"></strong>';
-    panel.appendChild(status);
-
-    var warn = document.createElement("div");
-    warn.id = "lp-hidden-warning";
-    warn.className = "lp-row warn";
-    warn.textContent = "Layer versteckt – Zeichnen deaktiviert";
-    warn.style.display = "none";
-    panel.appendChild(warn);
-
-    var rowLevel = document.createElement("div");
-    rowLevel.className = "lp-row";
-    var label = document.createElement("label");
-    label.appendChild(document.createTextNode("Level: "));
-    var slider = document.createElement("input");
-    slider.id = "lp-level";
-    slider.type = "range";
-    var max = editor.getLevelsCount ? (editor.getLevelsCount()|0)-1 : 0;
-    if (max<0) max=0;
-    slider.min = "0";
-    slider.max = ""+max;
-    var cur = editor.getCurrentLevel ? editor.getCurrentLevel()|0 : 0;
-    if (cur<0) cur=0; if (cur>max) cur=max;
-    slider.value = ""+cur;
-    label.appendChild(slider);
-    rowLevel.appendChild(label);
-    var spanVal = document.createElement("span");
-    spanVal.id = "lp-level-val";
-    spanVal.textContent = ""+cur;
-    rowLevel.appendChild(spanVal);
-    panel.appendChild(rowLevel);
-
-    var grid = document.createElement("div");
-    grid.className = "lp-row lp-layer-grid";
-    panel.appendChild(grid);
-
-    function makeBox(name, color, labelText){
-      var box = document.createElement("div");
-      box.className = "lp-box";
-      box.setAttribute("data-name", name);
-      var pill = document.createElement("span"); pill.className="lp-pill"; pill.style.background=color;
-      var nm = document.createElement("span"); nm.className="lp-name"; nm.textContent = labelText;
-      var btn = document.createElement("button"); btn.className = "lp-vis"; btn.title="Toggle Visibility"; btn.textContent="👁";
-      box.appendChild(pill); box.appendChild(nm); box.appendChild(btn); return box;
+    var root = document.getElementById("panel-layers");
+    var createdRoot = false;
+    if (!root){
+      root = document.createElement("div");
+      root.id = "panel-layers";
+      createdRoot = true;
     }
-    grid.appendChild(makeBox("floor", "#4FC3F7", "Floor"));
-    grid.appendChild(makeBox("wall", "#FF8A65", "Wall"));
-    grid.appendChild(makeBox("decor", "#BA68C8", "Decor"));
-    grid.appendChild(makeBox("entities", "#FFF176", "Entities"));
+    root.className = "em-panel";
+    root.innerHTML = ""
+      + "<div class='hdr'>Level & Layer</div>"
+      + "<div class='em-section' id='em-sec-level'></div>"
+      + "<div class='em-section' id='em-sec-layers'></div>"
+      + "<div class='em-section em-underlay' id='em-sec-underlay'></div>";
+    if (createdRoot) document.body.appendChild(root);
 
-    function getLayerBoxes(){ return grid.querySelectorAll(".lp-box"); }
-    function setActiveBox(activeName){
-      var list = getLayerBoxes();
-      for (var j=0;j<list.length;j++){ var n=list[j].getAttribute("data-name"); if (n===activeName) list[j].classList.add("active"); else list[j].classList.remove("active"); }
-    }
-    function updateActiveName(){
-      var el = document.getElementById("lp-active-name"); if (!el) return;
-      var n = editor.getCurrentLayer ? editor.getCurrentLayer() : "";
-      el.textContent = n || "";
-    }
-    function isVisible(name){ return editor.isLayerVisible ? !!editor.isLayerVisible(name) : true; }
-    function updateHiddenWarning(){
-      var active = editor.getCurrentLayer ? editor.getCurrentLayer() : "floor";
-      warn.style.display = isVisible(active) ? "none" : "block";
-    }
-    function syncVisibilityIcons(){
-      var list = getLayerBoxes();
-      for (var j=0;j<list.length;j++){ var box=list[j]; var btn=box.querySelector(".lp-vis"); if (!btn) continue; var name=box.getAttribute("data-name"); btn.textContent = isVisible(name) ? "👁" : "🚫"; box.classList.toggle("hidden", !isVisible(name)); }
-    }
+    // LEVELS
+    var secLevel = root.querySelector("#em-sec-level");
+    var levelRow = document.createElement("div");
+    levelRow.className = "em-row";
+    var levelLabel = document.createElement("div");
+    levelLabel.className = "em-label";
+    levelLabel.textContent = "Level";
+    var levelSelect = document.createElement("select");
+    levelSelect.className = "em-select";
 
-    if (!editor.uiHookedLevel && typeof editor.setCurrentLevel==="function"){
-      var origSetCurrentLevel = editor.setCurrentLevel;
-      editor.setCurrentLevel = function(i){ origSetCurrentLevel(i); updateActiveName(); updateHiddenWarning(); syncVisibilityIcons(); };
-      editor.uiHookedLevel = true;
+    var total = editor.getLevelsCount ? editor.getLevelsCount() : (editor.levelsState.count|0);
+    var current = editor.getCurrentLevel ? editor.getCurrentLevel() : (editor.levelsState.current|0);
+    var i, opt;
+    for (i=0;i<total;i++){
+      opt = document.createElement("option");
+      opt.value = i;
+      opt.text = "Level " + i;
+      if (i===current) opt.selected = true;
+      levelSelect.appendChild(opt);
     }
-    if (!editor.uiHookedLayer && typeof editor.setCurrentLayer==="function"){
-      var origSetCurrentLayer = editor.setCurrentLayer;
-      editor.setCurrentLayer = function(name){ origSetCurrentLayer(name); setActiveBox(name); updateActiveName(); updateHiddenWarning(); syncVisibilityIcons(); };
-      editor.uiHookedLayer = true;
-    }
-
-    slider.addEventListener("input", function(){
-      if (editor.setCurrentLevel){ editor.setCurrentLevel(slider.value|0); var cl=editor.getCurrentLevel?editor.getCurrentLevel()|0:0; spanVal.textContent = ""+cl;
-        var activeNow = editor.getCurrentLayer?editor.getCurrentLayer():"floor"; setActiveBox(activeNow); updateActiveName(); updateHiddenWarning(); syncVisibilityIcons(); }
+    levelSelect.addEventListener("change", function(){
+      editor.setCurrentLevel && editor.setCurrentLevel(+levelSelect.value|0);
     });
+    levelRow.appendChild(levelLabel);
+    levelRow.appendChild(levelSelect);
+    secLevel.appendChild(levelRow);
 
-    var boxes = getLayerBoxes();
-    for (var i=0;i<boxes.length;i++) (function(box){
-      var name = box.getAttribute("data-name");
-      box.addEventListener("click", function(e){ if (e.target && e.target.classList && e.target.classList.contains("lp-vis")) return;
-        if (editor.setCurrentLayer){ editor.setCurrentLayer(name); setActiveBox(name); updateActiveName(); updateHiddenWarning(); syncVisibilityIcons(); } });
-      var visBtn = box.querySelector(".lp-vis");
-      visBtn.addEventListener("click", function(e){ e.stopPropagation(); if (editor.setLayerVisible) editor.setLayerVisible(name, !isVisible(name)); syncVisibilityIcons(); updateHiddenWarning(); });
-      box.addEventListener("mouseenter", function(){ if (editor.setHoverLayer) editor.setHoverLayer(name); });
-      box.addEventListener("mouseleave", function(){ if (editor.setHoverLayer) editor.setHoverLayer(null); });
-    })(boxes[i]);
+    // LAYERS
+    var secLayers = root.querySelector("#em-sec-layers");
+    var list = document.createElement("div");
+    list.className = "em-layers";
+    secLayers.appendChild(list);
 
-    setActiveBox(editor.getCurrentLayer?editor.getCurrentLayer():"floor");
-    updateActiveName();
-    updateHiddenWarning();
-    syncVisibilityIcons();
+    var layers = ["floor","wall","decor","entities"];
+    var tint = { floor:"#4FC3F7", wall:"#FF8A65", decor:"#BA68C8", entities:"#FFF176" };
+
+    function makeEye(on){
+      var span = document.createElement("span");
+      span.className = "em-eye-btn";
+      span.title = on ? "Layer sichtbar" : "Layer ausgeblendet";
+      var i = document.createElement("span");
+      i.className = on ? "em-eye" : "em-eye-off";
+      span.appendChild(i);
+      return span;
+    }
+
+    function renderLayers(){
+      list.innerHTML = "";
+      var currentLayer = editor.getCurrentLayer ? editor.getCurrentLayer() : (editor.levelsState.layer || layers[0]);
+      for (var j=0;j<layers.length;j++){
+        (function(name){
+          var visible = editor.isLayerVisible ? editor.isLayerVisible(name) : !!editor.levelsState.show[name];
+          var row = document.createElement("div");
+          row.className = "em-layer" + (name===currentLayer ? " active" : "");
+          row.title = "Klicken, um Layer zu aktivieren";
+
+          // hover highlight bindings: set/unset hover layer
+          row.addEventListener("mouseenter", function(){ editor.setHoverLayer && editor.setHoverLayer(name); });
+          row.addEventListener("mouseleave", function(){ editor.setHoverLayer && editor.setHoverLayer(null); });
+
+          var sw = document.createElement("div");
+          sw.className = "em-swatch";
+          sw.style.background = tint[name] || "#9E9E9E";
+
+          var radio = document.createElement("div");
+          radio.style.width = "16px"; radio.style.height = "16px";
+          radio.style.borderRadius = "50%";
+          radio.style.border = "2px solid " + (name===currentLayer ? "#fff" : "rgba(255,255,255,0.35)");
+          radio.style.boxSizing = "border-box";
+
+          var nameEl = document.createElement("div");
+          nameEl.className = "em-name";
+          nameEl.textContent = name;
+
+          var eye = makeEye(visible);
+
+          row.addEventListener("click", function(ev){
+            if (ev.target === eye || eye.contains(ev.target)) return;
+            editor.setCurrentLayer && editor.setCurrentLayer(name);
+          });
+          eye.addEventListener("click", function(ev){
+            ev.stopPropagation();
+            var newVal = !(editor.isLayerVisible ? editor.isLayerVisible(name) : !!editor.levelsState.show[name]);
+            editor.setLayerVisible && editor.setLayerVisible(name, newVal);
+            renderLayers();
+          });
+
+          row.appendChild(sw);
+          row.appendChild(radio);
+          row.appendChild(nameEl);
+          row.appendChild(eye);
+          list.appendChild(row);
+        })(layers[j]);
+      }
+    }
+    renderLayers();
+
+    // UNDERLAY
+    var secUnder = root.querySelector("#em-sec-underlay");
+    var row1 = document.createElement("div"); row1.className = "em-row";
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true;
+    var cbLabel = document.createElement("span"); cbLabel.textContent = "Level darunter anzeigen";
+    row1.appendChild(cb); row1.appendChild(cbLabel);
+    secUnder.appendChild(row1);
+
+    var row2 = document.createElement("div"); row2.className = "em-row";
+    var atext = document.createElement("span"); atext.textContent = "Alpha";
+    var range = document.createElement("input"); range.type = "range"; range.min="0"; range.max="1"; range.step="0.05"; range.value="0.25";
+    var aval = document.createElement("span"); aval.textContent = range.value;
+    row2.appendChild(atext); row2.appendChild(range); row2.appendChild(aval);
+    secUnder.appendChild(row2);
+
+    cb.addEventListener("change", function(){ editor.setUnderlayPreviewEnabled && editor.setUnderlayPreviewEnabled(!!cb.checked); });
+    range.addEventListener("input", function(){ var v = Math.max(0, Math.min(1, +range.value||0)); aval.textContent = v; editor.setUnderlayPreviewAlpha && editor.setUnderlayPreviewAlpha(v); });
+
+    // Sync
+    editor.on && editor.on("level:changed", function(ev){
+      var idx = ev && ev.level || (editor.getCurrentLevel ? editor.getCurrentLevel() : 0);
+      levelSelect.value = idx;
+    });
+    editor.on && editor.on("layer:changed", function(){ renderLayers(); });
   }
 
   if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", onReady);

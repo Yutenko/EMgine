@@ -1,4 +1,4 @@
-// core-chunks.js – per-layer chunk caching, dirty tracking, rendering
+// core-chunks.js – per-layer chunk caching, dirty tracking, rendering (hover = highlight)
 (function(){
   function install(editor){
     var CHUNK_TILES = (editor.opts && editor.opts.chunkTiles | 0) || 32;
@@ -63,7 +63,7 @@
       var endCol = Math.min(WORLD.cols, cx*CHUNK_TILES + cmax + 1);
       var endRow = Math.min(WORLD.rows, cy*CHUNK_TILES + rmax + 1);
 
-      var hover = L.hoverLayer || null;
+      // Tiles des Layers in den Chunk rendern (volle Deckkraft; Filter erst beim drawImage)
       for (var row=startRow; row<endRow; row++){
         for (var col=startCol; col<endCol; col++){
           var idx = row*(L.cols|0) + col;
@@ -71,12 +71,10 @@
           if (!id) continue;
           var x = (col - cx*CHUNK_TILES) * ts;
           var y = (row - cy*CHUNK_TILES) * ts;
-          c2d.globalAlpha = !hover ? 1.0 : (layer===hover ? 1.0 : 0.25);
           c2d.fillStyle = editor.colorForIdLayer(layer, id);
           c2d.fillRect(x,y,ts,ts);
         }
       }
-      c2d.globalAlpha = 1.0;
       ch.dirty=false; ch.cmin=ch.rmin=ch.cmax=ch.rmax=null;
     }
 
@@ -98,13 +96,22 @@
     function renderDirtyChunks(ctx){
       var rect = getVisibleChunkRect();
       var L = editor.levelsState;
-      for (var layerName in L.show){
-        if (!L.show[layerName]) continue;
-        for (var cy=rect.cy0; cy<=rect.cy1; cy++){
-          for (var cx=rect.cx0; cx<=rect.cx1; cx++){
+      var hover = (!editor.suppressHoverHighlight && L.hoverLayer) ? L.hoverLayer : null;
+
+      for (var cy=rect.cy0; cy<=rect.cy1; cy++){
+        for (var cx=rect.cx0; cx<=rect.cx1; cx++){
+          for (var layerName in L.show){
+            if (!L.show[layerName]) continue;
             var ch = ensureLayerChunk(cx,cy,layerName);
             if (ch.dirty) redrawLayerChunk(cx,cy,layerName);
-            ctx.drawImage(ch.canvas, cx*CHUNK_TILES*editor.getTileSize(), cy*CHUNK_TILES*editor.getTileSize());
+            // Hover-Highlight: hovered Layer voll, andere gedimmt
+            if (hover && layerName !== hover){
+              ctx.globalAlpha = 0.20;
+              ctx.drawImage(ch.canvas, cx*CHUNK_TILES*editor.getTileSize(), cy*CHUNK_TILES*editor.getTileSize());
+              ctx.globalAlpha = 1.0;
+            } else {
+              ctx.drawImage(ch.canvas, cx*CHUNK_TILES*editor.getTileSize(), cy*CHUNK_TILES*editor.getTileSize());
+            }
           }
         }
       }

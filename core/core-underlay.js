@@ -6,6 +6,17 @@
     var UNDERLAY_PREVIEW = { enabled: true, alpha: 0.25, depth: 1 };
     var levelLayerChunks = new Map();
 
+    // Cache bei relevanten Änderungen leeren
+    editor.on && editor.on("level:changed", function(){
+      levelLayerChunks = new Map();
+    });
+    editor.on && editor.on("world:resize", function(){
+      levelLayerChunks = new Map();
+    });
+    editor.on && editor.on("levels:resize", function(){
+      levelLayerChunks = new Map();
+    });
+
     function levelLayerChunkKey(level,cx,cy,layer){ return level + "|" + cx + "," + cy + "," + layer; }
     function ensureLevelLayerChunk(level,cx,cy,layer){
       var key = levelLayerChunkKey(level,cx,cy,layer);
@@ -75,18 +86,32 @@
     function setUnderlayPreviewAlpha(a){ UNDERLAY_PREVIEW.alpha = Math.max(0, Math.min(1, +a||0)); editor.requestRender(); }
     function setUnderlayPreviewDepth(n){ UNDERLAY_PREVIEW.depth = Math.max(0, n|0); editor.requestRender(); }
 
+    function getVisibleChunkRect(){
+      var vis = editor.getVisibleGridRect();
+      var cx0 = (vis.c0 / CHUNK_TILES) | 0;
+      var cx1 = (Math.max(vis.c1-1, vis.c0) / CHUNK_TILES) | 0;
+      var cy0 = (vis.r0 / CHUNK_TILES) | 0;
+      var cy1 = (Math.max(vis.r1-1, vis.r0) / CHUNK_TILES) | 0;
+      var maxCx = ((WORLD.cols-1)/CHUNK_TILES)|0;
+      var maxCy = ((WORLD.rows-1)/CHUNK_TILES)|0;
+      cx0 = Math.max(0, Math.min(cx0, maxCx));
+      cx1 = Math.max(0, Math.min(cx1, maxCx));
+      cy0 = Math.max(0, Math.min(cy0, maxCy));
+      cy1 = Math.max(0, Math.min(cy1, maxCy));
+      return {cx0:cx0, cx1:cx1, cy0:cy0, cy1:cy1};
+    }
+
     function drawUnderlay(ctx){
       if (!UNDERLAY_PREVIEW.enabled) return;
       var depth = Math.max(1, UNDERLAY_PREVIEW.depth|0);
       var L = editor.levelsState;
-      var rect = editor.getVisibleChunkRect();
+      var rect = getVisibleChunkRect();
       ctx.save();
       ctx.globalAlpha = UNDERLAY_PREVIEW.alpha;
       for (var d=1; d<=depth; d++){
         var lvl = (L.current|0) - d;
         if (lvl < 0) break;
         for (var layerName in L.show){
-          // Underlay unabhängig von Sichtbarkeit des aktuellen Levels zeichnen
           for (var cy=rect.cy0; cy<=rect.cy1; cy++){
             for (var cx=rect.cx0; cx<=rect.cx1; cx++){
               var ch = ensureLevelLayerChunk(lvl,cx,cy,layerName);

@@ -1,0 +1,27 @@
+/* ui-selection.css – Mini-Toolbar für Auswahl */
+.selection-mini{
+  position: fixed;
+  display: none;
+  z-index: 30;
+  background: rgba(20,22,28,0.95);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+}
+.selection-mini button{
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: #232736;
+  color: #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  padding: 6px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.selection-mini button:hover{
+  background: #2b3042;
+  border-color: rgba(255,255,255,0.4);
+}

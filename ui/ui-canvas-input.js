@@ -1,4 +1,5 @@
-// ui-canvas-input.js – pointer handling + Bresenham line painting (ES5)
+// ui-canvas-input.js – Pointer-Handling fürs Malen/Pannen (ES5) + Bresenham
+// Beachtet Tool-Modus: nur "paint" und "pan" aktiv. Toolwechsel setzt Hover-Suppress zurück.
 (function () {
   function onReady() {
     var editor = window.editor;
@@ -14,8 +15,16 @@
     }
     window.addEventListener("em:setTool", function (ev) {
       var t = ev && ev.detail && ev.detail.tool;
-      if (t) mode = t;
+      if (t) {
+        mode = t;
+      }
+      // Hover-Highlight immer freigeben bei Toolwechsel
+      editor.suppressHoverHighlight = false;
+      editor.requestRender();
     });
+
+    // Hover-Highlight beim Malen ausblenden
+    editor.suppressHoverHighlight = false;
 
     canvas.addEventListener(
       "wheel",
@@ -86,30 +95,22 @@
 
     function paintAtTile(col, row) {
       var id = paintButton === 2 ? 0 : 1;
-      // Ensure coordinates are properly floored to avoid floating point errors
-      var tileCol = Math.floor(col);
-      var tileRow = Math.floor(row);
-      editor.setTile(tileCol, tileRow, id | 0);
+      editor.setTile(col | 0, row | 0, id | 0);
     }
 
     function paintFromEvent(e) {
       var t = tileFromEvent(e);
       if (!t) return;
-
-      // Ensure tile coordinates are integers
-      var tileCol = Math.floor(t.col);
-      var tileRow = Math.floor(t.row);
-
       if (lastTileCol == null || lastTileRow == null) {
-        paintAtTile(tileCol, tileRow);
-        lastTileCol = tileCol;
-        lastTileRow = tileRow;
+        paintAtTile(t.col | 0, t.row | 0);
+        lastTileCol = t.col | 0;
+        lastTileRow = t.row | 0;
         return;
       }
-      var c0 = lastTileCol,
-        r0 = lastTileRow;
-      var c1 = tileCol,
-        r1 = tileRow;
+      var c0 = lastTileCol | 0,
+        r0 = lastTileRow | 0;
+      var c1 = t.col | 0,
+        r1 = t.row | 0;
       if (c0 === c1 && r0 === r1) {
         paintAtTile(c1, r1);
       } else {
@@ -120,20 +121,30 @@
     }
 
     canvas.addEventListener("pointerdown", function (e) {
+      // Nur paint/pan-tools verarbeiten
+      if (toolMode() !== "paint" && toolMode() !== "pan") return;
+
       isDown = true;
       paintButton = e.button | 0;
       canvas.setPointerCapture(e.pointerId);
+
       if (toolMode() === "pan") {
         lastPanX = e.clientX;
         lastPanY = e.clientY;
         return;
       }
+
+      // Paint: Hover-Highlight aus
+      editor.suppressHoverHighlight = true;
+
       beginCompoundIfNeeded();
       paintFromEvent(e);
     });
 
     canvas.addEventListener("pointermove", function (e) {
       if (!isDown) return;
+      if (toolMode() !== "paint" && toolMode() !== "pan") return;
+
       if (toolMode() === "pan") {
         var z = editor.getCamera ? editor.getCamera().z : 1;
         var dx = (lastPanX - e.clientX) / z;
@@ -148,15 +159,24 @@
     });
 
     canvas.addEventListener("pointerup", function (e) {
+      if (toolMode() !== "paint" && toolMode() !== "pan") return;
+
       isDown = false;
       canvas.releasePointerCapture(e.pointerId);
       lastTileCol = lastTileRow = null;
+
+      // Hover-Highlight wieder an
+      editor.suppressHoverHighlight = false;
+      editor.requestRender();
+
       endCompoundIfNeeded();
     });
 
     canvas.addEventListener("pointerleave", function () {
       isDown = false;
       lastTileCol = lastTileRow = null;
+      editor.suppressHoverHighlight = false;
+      editor.requestRender();
       endCompoundIfNeeded();
     });
   }
