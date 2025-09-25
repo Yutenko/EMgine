@@ -1,0 +1,50 @@
+/* UI: Level & Layers panel */
+#level-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: rgba(17, 17, 22, 0.92);
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+  min-width: 220px;
+}
+#level-panel .lp-title { font-weight: 600; margin-bottom: 6px; opacity: .9; }
+#level-panel .lp-row { margin: 6px 0; }
+#level-panel .lp-row.small button {
+  font-size: 11px; padding: 6px 8px; border: 1px solid #3a3f52;
+  background: #1f2433; color: #e5e7eb; border-radius: 8px; cursor: pointer;
+}
+#level-panel input[type="range"] { width: 140px; vertical-align: middle; }
+#level-panel .lp-layer-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+#level-panel .lp-box {
+  position: relative; padding: 8px 36px 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px; cursor: pointer; user-select: none;
+  background: rgba(255, 255, 255, 0.05);
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s;
+}
+#level-panel .lp-box:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.35); }
+#level-panel .lp-box.active { box-shadow: 0 0 0 2px rgba(255,255,255,.45) inset; border-color: rgba(255,255,255,.6); }
+#level-panel .lp-box.hidden { opacity: .5; }
+#level-panel .lp-box .lp-name { font-weight: 600; }
+#level-panel .lp-box .lp-vis {
+  position: absolute; right: 6px; top: 6px; width: 26px; height: 26px; border-radius: 6px;
+  background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.25); color: #fff;
+  font-size: 16px; line-height: 24px; text-align: center; cursor: pointer;
+}
+#level-panel .lp-box .lp-vis:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.4); }
+#level-panel .warn {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+#level-panel .lp-pill { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle; border:1px solid rgba(255,255,255,.6); }

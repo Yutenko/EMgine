@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor</title>
+  <link rel="stylesheet" href="editor.css">
+  <link rel="stylesheet" href="editor-toolbar.css">
+
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script src="editor-core.js"></script>
+  <script src="editor-ui.js"></script>
+  <script src="editor-rulers.js"></script>
+  <script src="editor-toolbar.js"></script>
+
+
+  <script>
+    (function () {
+      function boot() {
+        var canvas = document.getElementById('canvas');
+        if (!canvas) {console.error('[boot] kein canvas gefunden'); return;}
+        window.canvas = canvas;
+        try {
+          window.editor = new Editor(canvas, {cols: 64, rows: 64, tileSize: 32});
+          // Signal: editor ready
+          document.dispatchEvent(new CustomEvent('editor:ready', {detail: {editor: window.editor}}));
+          console.log('[boot] editor ready');
+        } catch (e) {
+          console.error('[boot] Editor init error:', e);
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>
+
+</body>
+
+</html>
