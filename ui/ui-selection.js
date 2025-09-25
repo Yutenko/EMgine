@@ -1,4 +1,4 @@
-// ui-selection.js – Selection tool (ES5), stable marquee rendering, repeated copy, paste button
+// ui-selection.js – Selection tool (ES5), stable + balanced
 (function(){
   var TOOL_NAME = "select";
 
@@ -34,6 +34,10 @@
     var clipIsCut = false;
 
     var lastMouseTile = null;
+
+    // Click-vs-drag tracking for outside clicks
+    var downTile = null;            // tile at pointerdown if outside selection
+    var startedNewSelection = false;
 
     // ---- Helpers ----
     function normSel(a,b){
@@ -135,7 +139,7 @@
       editor.requestRender();
       return true;
     }
-    function writeRegionAt(reg, col, row){
+    function writeRegionAt(reg, col, row) {
       if (!reg) return false;
       var L=editor.levelsState, lvlIdx=L.current|0, cols=L.cols|0;
       var changes=[], li, layer, r, c, id, t, idx, prev;
@@ -144,6 +148,8 @@
         for (r=0;r<reg.h;r++){
           for (c=0;c<reg.w;c++){
             id = reg.data[layer][r][c]|0;
+
+            if (!id) { continue; }
             t = clampToWorld((col|0)+c, (row|0)+r);
             idx = (t.row*(cols|0) + t.col);
             prev = L.data[lvlIdx][layer][idx]|0;
@@ -187,6 +193,27 @@
       }
       return out;
     }
+    function buildGhostFromData(reg){
+      if (!reg) return null;
+      var ts = editor.getTileSize();
+      var wpx = (reg.w|0) * ts;
+      var hpx = (reg.h|0) * ts;
+      var cnv = (typeof OffscreenCanvas!=="undefined") ? new OffscreenCanvas(wpx,hpx) : (function(){ var t=document.createElement("canvas"); t.width=wpx; t.height=hpx; return t; })();
+      var c2d = cnv.getContext("2d");
+      var li, layer, r, c, id;
+      for (li=0; li<reg.layers.length; li++){
+        layer = reg.layers[li];
+        for (r=0; r<reg.h; r++){
+          for (c=0; c<reg.w; c++){
+            id = reg.data[layer][r][c]|0;
+            if (!id) continue;
+            c2d.fillStyle = editor.colorForIdLayer(layer, id);
+            c2d.fillRect(c*ts, r*ts, ts, ts);
+          }
+        }
+      }
+      return cnv;
+    }
 
     // ---- Mini toolbar ----
     var ui = document.createElement("div");
@@ -217,7 +244,7 @@
 
       if (a==="copy"){
         if (!hasSel()) return;
-        // Wenn bereits eine Floating-Kopie existiert: nichts weiter tun (max. 1 aktive Kopie)
+        // Nur eine aktive Floating-Kopie (wie ursprünglich)
         if (floating && floatData){ placeMiniToolbar(); return; }
 
         var src = readRegion(sel);
@@ -231,7 +258,6 @@
         floatPos = {col:start.col,row:start.row};
         floatDragOffset = {dc:0, dr:0};
 
-        // Auswahl folgt der Floating-Box
         sel = {c0:floatPos.col, r0:floatPos.row, c1:floatPos.col+floatData.w-1, r1:floatPos.row+floatData.h-1};
         editor.requestRender();
         placeMiniToolbar();
@@ -251,12 +277,24 @@
           floating=false; floatData=null; floatDragOffset={dc:0,dr:0};
           editor.requestRender();
         } else if (clip){
-          pasteClipboardAsFloating(t ? t.col : 0, t ? t.row : 0);
+          // Kein Floating aktiv -> neue Floating-Box in Mausnähe
+          floatData = deepCopyRegion(clip);
+          floating = true; clipIsCut=false;
+          var start2 = findNearbyPlacement(t ? t.col : 0, t ? t.row : 0, floatData.w, floatData.h);
+          floatPos = start2; floatDragOffset = {dc:0,dr:0};
+          sel = {c0:floatPos.col, r0:floatPos.row, c1:floatPos.col+floatData.w-1, r1:floatPos.row+floatData.h-1};
+          editor.requestRender();
         }
         placeMiniToolbar();
         return;
       } else if (a==="cut"){
-        cutSelection();
+        if (!hasSel()) return;
+        clip = readRegion(sel);
+        clipIsCut = true;
+        if (editor.beginCompound) editor.beginCompound("cut-selection");
+        clearRegion(sel);
+        if (editor.endCompound) editor.endCompound(false);
+        editor.requestRender();
         placeMiniToolbar();
         return;
       } else if (a==="rot"){
@@ -296,11 +334,12 @@
         var fx = floatPos.col*ts + floatDragOffset.dc*ts;
         var fy = floatPos.row*ts + floatDragOffset.dr*ts;
         ctx.globalAlpha = 0.5;
-        for (var li=0; li<floatData.layers.length; li++){
-          var layer = floatData.layers[li];
-          for (var r=0; r<floatData.h; r++){
-            for (var c=0; c<floatData.w; c++){
-              var id = floatData.data[layer][r][c]|0;
+        var li, layer, r, c, id;
+        for (li=0; li<floatData.layers.length; li++){
+          layer = floatData.layers[li];
+          for (r=0; r<floatData.h; r++){
+            for (c=0; c<floatData.w; c++){
+              id = floatData.data[layer][r][c]|0;
               if (!id) continue;
               ctx.fillStyle = editor.colorForIdLayer(layer, id);
               ctx.fillRect(fx + c*ts, fy + r*ts, ts, ts);
@@ -336,8 +375,8 @@
         }
 
         ctx.lineWidth = 2 / editor.getCamera().z;
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.fillStyle = "rgba(255,255,255,0.09)";
         ctx.fillRect(x,y,w,h);
         ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
       }
@@ -353,13 +392,12 @@
       if (nowActive === active) return;
       active = nowActive;
       if (!active){
-        sel = null; selecting=false;
+        sel = null; selecting=false; hideMini();
         draggingSel=false; dragStartSel=null; dragOffsetSel={dc:0,dr:0};
         moveGhostData=null; moveGhostCanvas=null; selStartForMove=null;
         floating=false; floatData=null; floatPos={col:0,row:0};
         floatDragging=false; floatDragStart=null; floatDragOffset={dc:0,dr:0};
         canvas.style.cursor = "";
-        hideMini();
       }
       editor.requestRender();
     });
@@ -376,33 +414,36 @@
         floatDragging = true;
         floatDragStart = {col:t.col, row:t.row};
         floatDragOffset = {dc:0, dr:0};
+        canvas.style.cursor = "grabbing";
         e.preventDefault();
         return;
       }
 
-      // Click outside: deselect then continue to start new selection
-      if (hasSel() && !insideSel(t)){
-        sel = null;
-      }
-
-      // Classic move start if inside selection (and no floating)
+      // Inside current selection (no floating): start move
       if (!floating && hasSel() && insideSel(t)){
         draggingSel = true;
         dragStartSel = {col:t.col, row:t.row};
         dragOffsetSel = {dc:0, dr:0};
         selStartForMove = {c0:sel.c0, r0:sel.r0, c1:sel.c1, r1:sel.r1};
-        moveGhostData = readRegion(sel);
+        moveGhostData = readRegion(selStartForMove);
         moveGhostCanvas = buildGhostFromData(moveGhostData);
+        canvas.style.cursor = "grabbing";
+        editor.requestRender();
         e.preventDefault();
         return;
       }
 
-      // Start new selection
-      selecting = true;
-      sel = normSel(t, t);
-      dragOffsetSel = {dc:0, dr:0};
-      moveGhostData=null; moveGhostCanvas=null; selStartForMove=null;
-      editor.requestRender();
+      // Outside current selection: deselect and *do not* start new selection yet (wait for drag)
+      if (hasSel() && !insideSel(t)){
+        sel = null;
+        hideMini();
+        editor.requestRender();
+      }
+
+      // Prepare click-vs-drag
+      downTile = {col:t.col, row:t.row};
+      startedNewSelection = false;
+      selecting = false;
       e.preventDefault();
     });
 
@@ -413,14 +454,28 @@
       var overMove = false;
       if (floating && t && insideFloat(t)) overMove = true;
       else if (!floating && t && hasSel() && insideSel(t)) overMove = true;
-      canvas.style.cursor = (active && overMove) ? "move" : (active ? "" : "");
+      if (!draggingSel && !floatDragging){
+        canvas.style.cursor = (active && overMove) ? "move" : (active ? "" : "");
+      }
 
       if (!active) return;
 
-      if (selecting && t){
-        sel = normSel({col:sel.c0,row:sel.r0}, t);
-        editor.requestRender();
-      } else if (floatDragging && t){
+      // Start marquee only when user drags to a different tile after an outside click
+      if (!floating && !draggingSel && downTile && t){
+        if (!startedNewSelection && (t.col !== downTile.col || t.row !== downTile.row)){
+          selecting = true;
+          sel = normSel(downTile, t);
+          startedNewSelection = true;
+          editor.requestRender();
+          return;
+        } else if (startedNewSelection && selecting){
+          sel = normSel(downTile, t);
+          editor.requestRender();
+          return;
+        }
+      }
+
+      if (floatDragging && t){
         floatDragOffset.dc = (t.col - floatDragStart.col)|0;
         floatDragOffset.dr = (t.row - floatDragStart.row)|0;
         sel = {c0:(floatPos.col+floatDragOffset.dc)|0, r0:(floatPos.row+floatDragOffset.dr)|0,
@@ -437,6 +492,14 @@
       if (!active) return;
       canvas.releasePointerCapture(e.pointerId);
 
+      // If we were waiting to see if this is a drag but user just clicked outside -> nothing else to do
+      if (!floating && !draggingSel && downTile && !startedNewSelection){
+        downTile = null;
+        selecting = false;
+        editor.requestRender();
+        return;
+      }
+
       // Floating commit
       if (floatDragging && floatData){
         floatDragging = false;
@@ -445,8 +508,11 @@
         writeRegionAt(floatData, target.col, target.row);
         if (editor.endCompound) editor.endCompound(false);
         sel = {c0:target.col, r0:target.row, c1:target.col+floatData.w-1, r1:target.row+floatData.h-1};
-        if (clipIsCut){ sel=null; clip=null; clipIsCut=false; }
+        if (clipIsCut){
+          sel=null; clip=null; clipIsCut=false; hideMini();
+        }
         floating=false; floatData=null; floatDragOffset={dc:0,dr:0};
+        canvas.style.cursor = "";
         editor.requestRender();
         return;
       }
@@ -466,19 +532,23 @@
         }
         dragOffsetSel={dc:0,dr:0};
         moveGhostData=null; moveGhostCanvas=null; selStartForMove=null;
+        canvas.style.cursor = "";
         editor.requestRender();
       }
 
+      downTile = null;
       selecting = false;
     });
 
     canvas.addEventListener("pointerleave", function(){
       selecting = false;
+      if (draggingSel || floatDragging) canvas.style.cursor = "";
       draggingSel = false;
       floatDragging = false;
       dragOffsetSel = {dc:0,dr:0};
       floatDragOffset = {dc:0,dr:0};
-      canvas.style.cursor = "";
+      downTile = null;
+      startedNewSelection = false;
     });
 
     // ---- Shortcuts ----
@@ -487,25 +557,36 @@
       var key = (e.key || "").toLowerCase();
       var mod = e.ctrlKey || e.metaKey;
 
-      if (mod && key==="c"){ if (hasSel()) { clipIsCut=false; clip = readRegion(sel); } e.preventDefault(); }
-      else if (mod && key==="x"){ if (hasSel()) { clipIsCut=true; clip = readRegion(sel); if (editor.beginCompound) editor.beginCompound('cut-selection'); clearRegion(sel); if (editor.endCompound) editor.endCompound(false); editor.requestRender(); } e.preventDefault(); }
-      else if (mod && key==="v"){
+      if (mod && key==="c"){
+        if (hasSel()){
+          clipIsCut=false; clip = readRegion(sel);
+        }
+        e.preventDefault();
+      } else if (mod && key==="x"){
+        if (hasSel()){
+          clipIsCut=true; clip = readRegion(sel);
+          if (editor.beginCompound) editor.beginCompound('cut-selection');
+          clearRegion(sel);
+          if (editor.endCompound) editor.endCompound(false);
+          editor.requestRender();
+        }
+        e.preventDefault();
+      } else if (mod && key==="v"){
         var t = lastMouseTile;
         if (!t){
           var r = canvas.getBoundingClientRect();
           t = editor.clientToTile({clientX:r.left+10, clientY:r.top+10});
         }
-        if (clip){ // start floating from clipboard near mouse
+        if (clip){
           floatData = deepCopyRegion(clip);
           floating = true; clipIsCut=false;
           var start = findNearbyPlacement(t ? t.col : 0, t ? t.row : 0, floatData.w, floatData.h);
-          floatPos = {col:start.col,row:start.row};
+          floatPos = start; floatDragOffset = {dc:0,dr:0};
           sel = {c0:floatPos.col, r0:floatPos.row, c1:floatPos.col+floatData.w-1, r1:floatPos.row+floatData.h-1};
           editor.requestRender();
         }
         e.preventDefault();
-      }
-      else if (key==="delete" || key==="backspace"){
+      } else if (key==="delete" || key==="backspace"){
         if (hasSel()){
           if (editor.beginCompound) editor.beginCompound("delete-selection");
           clearRegion(sel);
@@ -513,20 +594,25 @@
           editor.requestRender();
         }
         e.preventDefault();
-      }
-      else if (key==="escape"){
-        if (floating){ floating=false; floatData=null; floatDragOffset={dc:0,dr:0}; }
+      } else if (key==="escape"){
+        if (floating){
+          floating=false; floatData=null; floatDragOffset={dc:0,dr:0};
+        }
         sel=null;
+        hideMini();
         moveGhostData=null; moveGhostCanvas=null; selStartForMove=null;
+        canvas.style.cursor = "";
         editor.requestRender();
         e.preventDefault();
-      }
-      else if (key==="enter" || key==="return"){
+      } else if (key==="enter" || key==="return"){
         if (floating && floatData){
           if (editor.beginCompound) editor.beginCompound(clipIsCut ? "paste-from-cut" : "paste-copy");
           writeRegionAt(floatData, floatPos.col + floatDragOffset.dc, floatPos.row + floatDragOffset.dr);
           if (editor.endCompound) editor.endCompound(false);
-          if (clipIsCut){ sel=null; clip=null; clipIsCut=false; } else {
+          if (clipIsCut){
+            sel=null; clip=null; clipIsCut=false;
+            hideMini();
+          } else {
             sel = {c0:floatPos.col+floatDragOffset.dc, r0:floatPos.row+floatDragOffset.dr,
                    c1:floatPos.col+floatDragOffset.dc+floatData.w-1, r1:floatPos.row+floatDragOffset.dr+floatData.h-1};
           }
@@ -540,7 +626,13 @@
     // External activation (toolbar)
     window.emSelectToolActivate = function(){
       var evt = null;
-      try { evt = new CustomEvent("em:setTool", {detail:{tool:TOOL_NAME}}); } catch(e){}
+      try {
+        evt = new CustomEvent("em:setTool", {detail:{tool:TOOL_NAME}});
+      } catch(err){
+        var ev = document.createEvent("CustomEvent");
+        ev.initCustomEvent("em:setTool", true, true, {tool:TOOL_NAME});
+        evt = ev;
+      }
       if (evt) window.dispatchEvent(evt);
     };
   }
