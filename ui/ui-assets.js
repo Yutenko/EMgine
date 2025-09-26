@@ -10,10 +10,11 @@
   var previewCanvas = null, previewCtx = null;
   var currentTilesetId = null;
 
-  // Pool refs
-  var poolTabs = null, poolList = null;
-  var currentPoolLayer = "floor";
-  var layers = ["floor","wall","decor","entities"];
+  // Pool refs - temporarily disabled
+  // var poolTabs = null, poolList = null, poolTiles = null;
+  // var currentPoolLayer = "floor";
+  // var layers = ["floor","wall","decor","entities"];
+  // var selectedTiles = new Set(); // Track selected tile IDs
 
   var gridOn = true;
 
@@ -47,7 +48,6 @@
     switchTab("import");
     modal.style.display = "flex";
     updateTilesetList(); // refresh lists
-    renderPoolTabs(); renderPoolTilesets();
   }
   function closeModal(){ if (modal) modal.style.display="none"; }
 
@@ -60,13 +60,11 @@
       + '    <div class="assets-title">Assets</div>'
       + '    <div class="assets-tabs" id="assetsTabs">'
       + '      <button class="assets-tab assets-tab-active" data-tab="import">Import</button>'
-      + '      <button class="assets-tab" data-tab="pool">Pool</button>'
       + '    </div>'
       + '    <button class="assets-close">×</button>'
       + '  </div>'
       + '  <div class="assets-body">'
       + '    <section class="assets-section" id="assetsImport"></section>'
-      + '    <section class="assets-section" id="assetsPool" style="display:none"></section>'
       + '  </div>'
       + '  <div class="assets-footer">'
       + '    <button class="assets-close2">Schließen</button>'
@@ -76,7 +74,7 @@
 
     tabBar = modal.querySelector("#assetsTabs");
     sectionImport = modal.querySelector("#assetsImport");
-    sectionPool = modal.querySelector("#assetsPool");
+    // sectionPool = modal.querySelector("#assetsPool"); // temporarily disabled
 
     modal.querySelector(".assets-close").addEventListener("click", closeModal, false);
     modal.querySelector(".assets-close2").addEventListener("click", closeModal, false);
@@ -86,14 +84,12 @@
     }, false);
 
     buildImportSection();
-    buildPoolSection();
 
     // listen to editor events for live refresh
     var ed = getEditor();
     if (ed && ed.on){
       ed.on("tilesets:changed", function(){
         updateTilesetList();
-        renderPoolTilesets();
         // keep preview in sync
         if (currentTilesetId){
           var ts = ed.getTilesetById(currentTilesetId);
@@ -101,18 +97,15 @@
         }
         drawPreview();
       });
+      // ed.on("layer:mapping:changed", function(){
+      //   renderPoolTiles();
+      // });
     }
   }
 
   function switchTab(name){
-    var tabs = tabBar.querySelectorAll(".assets-tab"); var i;
-    for (i=0;i<tabs.length;i++){
-      var n = tabs[i].getAttribute("data-tab");
-      if (n===name) tabs[i].className = "assets-tab assets-tab-active";
-      else tabs[i].className = "assets-tab";
-    }
-    sectionImport.style.display = (name==="import") ? "block" : "none";
-    sectionPool.style.display   = (name==="pool") ? "block" : "none";
+    // Only import tab available for now
+    sectionImport.style.display = "block";
   }
 
   // ---------- Import UI ----------
@@ -252,7 +245,6 @@
           ed.removeTileset(id);
           if (currentTilesetId===id){ currentTilesetId=null; if (sectionImport && sectionImport._drawPreview) sectionImport._drawPreview(); }
           if (sectionImport && sectionImport._updateTilesetList) sectionImport._updateTilesetList();
-          renderPoolTilesets();
         }
       }, false);
     }
@@ -384,54 +376,55 @@
     updateTilesetList();
   }
 
-  // ---------- Pool UI ----------
-  function buildPoolSection(){
-    sectionPool.innerHTML = ''
-      + '<div class="ap-tabs" id="apTabs"></div>'
-      + '<div class="ap-list" id="apList"></div>';
+  // ---------- Pool UI - temporarily disabled ----------
+  // function buildPoolSection(){
+  //   sectionPool.innerHTML = ''
+  //     + '<div class="ap-tabs" id="apTabs"></div>'
+  //     + '<div class="ap-content">'
+  //     + '  <div class="ap-all-tiles" id="apAllTiles">'
+  //     + '    <div class="ap-section-header">'
+  //     + '      <h4>Alle Tiles</h4>'
+  //     + '      <div class="ap-selection-info">0 ausgewählt</div>'
+  //     + '    </div>'
+  //     + '    <div class="ap-tiles-grid" id="apTilesGrid"></div>'
+  //     + '  </div>'
+  //     + '  <div class="ap-layers" id="apLayers">'
+  //     + '    <div class="ap-section-header">'
+  //     + '      <h4>Layer-Zuordnung</h4>'
+  //     + '      <div class="ap-instructions">Klicke auf Tiles zum Auswählen, dann auf Layer zum Zuweisen</div>'
+  //     + '    </div>'
+  //     + '    <div class="ap-layer-zones" id="apLayerZones"></div>'
+  //     + '  </div>'
+  //     + '</div>';
 
-    poolTabs = sectionPool.querySelector("#apTabs");
-    poolList = sectionPool.querySelector("#apList");
-  }
+  //   poolTabs = sectionPool.querySelector("#apTabs");
+  //   poolList = sectionPool.querySelector("#apAllTiles");
+  //   poolTiles = sectionPool.querySelector("#apTilesGrid");
+  // }
 
-  function renderPoolTabs(){
-    var i, l, html='';
-    for (i=0;i<layers.length;i++){
-      l = layers[i];
-      html += '<button class="ap-tab'+(l===currentPoolLayer?' ap-tab-active':'')+'" data-layer="'+l+'">'+l.toUpperCase()+'</button>';
-    }
-    poolTabs.innerHTML = html;
-    var btns = poolTabs.querySelectorAll(".ap-tab"); var k;
-    for (k=0;k<btns.length;k++){
-      btns[k].addEventListener("click", function(){
-        currentPoolLayer = this.getAttribute("data-layer");
-        renderPoolTabs(); renderPoolTilesets();
-      }, false);
-    }
-  }
+  // Pool functions temporarily disabled
+  // function renderPoolTabs(){...}
+  // function renderPoolTilesets(){...}
+  // function handleTileSelection(tileId){...}
+  // function renderLayerZones(){...}
+  // function assignSelectedTilesToLayer(layer){...}
+  // function updateSelectionInfo(){...}
 
-  function renderPoolTilesets(){
-    var ed = getEditor(); if (!ed) return;
-    var arr = ed.getTilesets ? ed.getTilesets() : [];
-    var allow = ed.getAllowedTilesets ? ed.getAllowedTilesets(currentPoolLayer) : [];
-    var i, ts, html='';
-    for (i=0;i<arr.length;i++){
-      ts = arr[i];
-      var checked = indexOf(allow, ts.id)!==-1 ? ' checked' : '';
-      html += '<label class="ap-item"><input type="checkbox" data-id="'+ts.id+'"'+checked+'/> '+escapeHtml(ts.name)+' <span class="ap-meta">['+(ts.type==="atlas"?(ts.tileWidth+'×'+ts.tileHeight):('Collection '+(ts.images?ts.images.length:0)))+']</span></label>';
-    }
-    if (!arr.length) html = '<div class="ap-empty">Noch keine Tilesets importiert.</div>';
-    poolList.innerHTML = html;
-
-    var boxes = poolList.querySelectorAll("input[type=checkbox]"); var j;
-    for (j=0;j<boxes.length;j++){
-      boxes[j].addEventListener("change", function(){
-        var ed = getEditor(); if (!ed) return;
-        var id = this.getAttribute("data-id")|0;
-        if (this.checked) ed.addAllowedTileset(currentPoolLayer, id);
-        else ed.removeAllowedTileset(currentPoolLayer, id);
-      }, false);
-    }
+  function drawTilePreview(ctx, tile, w, h){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,w,h);
+    ctx.imageSmoothingEnabled = false;
+    var img = tile.image, sw,sh,sx,sy;
+    if (!img){ ctx.fillStyle="#3e7bd2"; ctx.fillRect(0,0,w,h); return; }
+    if (tile.type==="atlas"){
+      sw=tile.tileWidth|0; sh=tile.tileHeight|0; sx=(tile.col|0)*sw; sy=(tile.row|0)*sh;
+    } else { sw=img.width|0; sh=img.height|0; sx=0; sy=0; }
+    var scale = Math.min(w/sw, h/sh);
+    var dw = Math.max(1, Math.round(sw*scale));
+    var dh = Math.max(1, Math.round(sh*scale));
+    var dx = (w - dw) >> 1;
+    var dy = (h - dh) >> 1;
+    ctx.drawImage(img, sx,sy, sw,sh, dx,dy, dw,dh);
   }
 
   var _updateTilesetListQueued = false;

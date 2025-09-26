@@ -2,7 +2,12 @@
 .tp-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);z-index:10060;}
 .tp-dialog{background:#13161c;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,0.5);padding:8px;}
 .tp-grid{display:grid;grid-template-columns:repeat(auto-fill,16px);gap:6px;max-width:min(90vw,720px);max-height:min(80vh,520px);overflow:auto;}
-.tp-cell{width:16px;height:16px;border-radius:4px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#0f1217;}
+.tp-cell{width:16px;height:16px;border-radius:4px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#0f1217;position:relative;}
 .tp-cell:hover{border-color:#64b5f6;}
-.tp-cell-active{outline:2px solid rgba(100,181,246,0.8);outline-offset:1px;}
+.tp-cell-active{
+  outline:2px solid rgba(100,181,246,0.8);
+  outline-offset:1px;
+  background:rgba(100,181,246,0.2);
+  box-shadow:0 0 4px rgba(100,181,246,0.4);
+}
 .tp-thumb{width:16px;height:16px;image-rendering:pixelated;display:block;}

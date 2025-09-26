@@ -230,6 +230,78 @@
     editor.removeTileset = removeTileset;
     editor.getTilesets = getTilesets;
     editor.getTilesetById = getTilesetById;
+
+    // Load the tiles.png file as the default tileset
+    function loadDefaultTileset(){
+      var img = new Image();
+      img.onload = function(){
+        var ts = createAtlasFromImage(img, "tiles.png", "tiles.png");
+        // Set the tile size to 16x16 as specified
+        ts.tileWidth = 16;
+        ts.tileHeight = 16;
+        ts.columns = Math.floor(ts.width / 16);
+        ts.rows = Math.floor(ts.height / 16);
+        ts.margin = 0;
+        ts.spacing = 0;
+        emitChanged();
+        console.log("Loaded tiles.png:", ts.width + "x" + ts.height, "with", ts.columns + "x" + ts.rows, "tiles of", ts.tileWidth + "x" + ts.tileHeight);
+      };
+      img.onerror = function(){
+        console.warn("Failed to load tiles.png - falling back to test tileset");
+        addTestTileset();
+      };
+      img.src = "tiles.png";
+    }
+
+    // Add a simple test tileset for demonstration (fallback)
+    function addTestTileset(){
+      var canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      var ctx = canvas.getContext('2d');
+
+      // Draw a simple test pattern
+      ctx.fillStyle = '#8B4513'; // Brown
+      ctx.fillRect(0, 0, 32, 32);
+      ctx.fillStyle = '#228B22'; // Green
+      ctx.fillRect(32, 0, 32, 32);
+      ctx.fillStyle = '#696969'; // Gray
+      ctx.fillRect(0, 32, 32, 32);
+      ctx.fillStyle = '#FFD700'; // Gold
+      ctx.fillRect(32, 32, 32, 32);
+
+      // Add some borders
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, 32, 32);
+      ctx.strokeRect(32, 0, 32, 32);
+      ctx.strokeRect(0, 32, 32, 32);
+      ctx.strokeRect(32, 32, 32, 32);
+
+      var testTileset = {
+        id: nextId(),
+        type: "atlas",
+        sourceType: "generated",
+        url: null,
+        name: "Test Tileset",
+        image: canvas,
+        width: 64,
+        height: 64,
+        detectedSizes: [{w:32, h:32, score:100, cols:2, rows:2}],
+        tileWidth: 32,
+        tileHeight: 32,
+        margin: 0,
+        spacing: 0,
+        columns: 2,
+        rows: 2
+      };
+      tilesets.push(testTileset);
+      emitChanged();
+      return testTileset;
+    }
+
+    // Load default tileset after initialization
+    setTimeout(loadDefaultTileset, 50);
   }
   window.EditorTilesetImport = install;
 })();

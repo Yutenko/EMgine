@@ -71,8 +71,39 @@
           if (!id) continue;
           var x = (col - cx*CHUNK_TILES) * ts;
           var y = (row - cy*CHUNK_TILES) * ts;
-          c2d.fillStyle = editor.colorForIdLayer(layer, id);
-          c2d.fillRect(x,y,ts,ts);
+
+          // Draw actual tile graphics instead of colored rectangles
+          var tile = editor.getTileById ? editor.getTileById(id) : null;
+          if (tile && tile.image) {
+            // Calculate source position in tileset
+            var tileset = editor.getTilesetById ? editor.getTilesetById(tile.tilesetId) : null;
+            if (tileset && tileset.type === "atlas") {
+              var srcX = (tile.col | 0) * (tileset.tileWidth | 0);
+              var srcY = (tile.row | 0) * (tileset.tileHeight | 0);
+              var srcW = tileset.tileWidth | 0;
+              var srcH = tileset.tileHeight | 0;
+
+              // Draw the tile from the tileset
+              try {
+                c2d.drawImage(tile.image, srcX, srcY, srcW, srcH, x, y, ts, ts);
+              } catch (e) {
+                console.warn("Failed to draw tile", id, ":", e);
+                // Fallback: draw colored rectangle
+                c2d.fillStyle = editor.colorForIdLayer(layer, id);
+                c2d.fillRect(x, y, ts, ts);
+              }
+            } else {
+              console.warn("No tileset found for tile", id, "tilesetId:", tile.tilesetId);
+              // Fallback: draw colored rectangle if tile image not available
+              c2d.fillStyle = editor.colorForIdLayer(layer, id);
+              c2d.fillRect(x, y, ts, ts);
+            }
+          } else {
+            console.warn("No tile found for id", id, "or no image available");
+            // Fallback: draw colored rectangle if tile not found
+            c2d.fillStyle = editor.colorForIdLayer(layer, id);
+            c2d.fillRect(x, y, ts, ts);
+          }
         }
       }
       ch.dirty=false; ch.cmin=ch.rmin=ch.cmax=ch.rmax=null;

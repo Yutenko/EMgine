@@ -1,8 +1,7 @@
-// ui-palette.js — Minimal palette (SPACE), 16×16 thumbs, click outside to close, drag-rectangle multi-pick -> brush pattern
+// ui-palette.js — Minimal palette (SPACE), 16×16 thumbs, click outside to close, single tile selection
 (function(){
   var modal = null, dialog = null, grid = null;
   var tiles = [];
-  var startIdx = null, currentIdx = null, dragging = false;
   var colCount = 0;
 
   function getEditor(){ return window.editor; }
@@ -52,9 +51,7 @@
       drawThumb(cn.getContext("2d"), t);
       btn.appendChild(cn);
       btn.addEventListener("mousedown", onDown, false);
-      btn.addEventListener("mouseenter", onEnter, false);
       btn.addEventListener("touchstart", function(e){ e.preventDefault(); onDown(e); }, {passive:false});
-      btn.addEventListener("touchmove", function(e){ e.preventDefault(); var el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY); if (el){ var p=el.closest('.tp-cell'); if(p) onEnter({currentTarget:p}); } }, {passive:false});
       frag.appendChild(btn);
     }
     grid.appendChild(frag);
@@ -66,77 +63,18 @@
     var cell = e.currentTarget;
     var idx = cell ? (cell.getAttribute("data-idx")|0) : null;
     if (idx==null) return;
-    clearSelection();
-    startIdx = idx; currentIdx = idx; dragging = true;
-    updateSelectionVisual();
-    e.preventDefault();
-  }
-  function onEnter(e){
-    if (!dragging) return;
-    var cell = e.currentTarget;
-    if (!cell) return;
-    currentIdx = cell.getAttribute("data-idx")|0;
-    updateSelectionVisual();
-  }
-  function onUp(){
-    if (!dragging) return;
-    dragging = false;
-    commitSelection();
-  }
 
-  function rectForIndices(a,b){
-    var i0 = Math.min(a|0, b|0), i1 = Math.max(a|0, b|0);
-    var c0 = i0 % colCount, r0 = (i0 / colCount) | 0;
-    var c1 = i1 % colCount, r1 = (i1 / colCount) | 0;
-    return {c0:c0,r0:r0,c1:c1,r1:r1};
-  }
-
-  function updateSelectionVisual(){
-    var r = rectForIndices(startIdx, currentIdx);
-    var i;
-    var cells = grid.children;
-    for (i=0;i<cells.length;i++){
-      var c = i % colCount, r0 = (i / colCount)|0;
-      var active = (c>=r.c0 && c<=r.c1 && r0>=r.r0 && r0<=r.r1);
-      cells[i].className = active ? "tp-cell tp-cell-active" : "tp-cell";
-    }
-  }
-  function clearSelection(){
-    var i, cells = grid.children;
-    for (i=0;i<cells.length;i++) cells[i].className = "tp-cell";
-  }
-
-  function commitSelection(){
-    var ed = getEditor(); if (!ed) return;
-    var r = rectForIndices(startIdx, currentIdx);
-    var w = (r.c1 - r.c0 + 1) | 0;
-    var h = (r.r1 - r.r0 + 1) | 0;
-
-    if (w===1 && h===1){
-      // single tile -> simple brush id
-      var id = tiles[startIdx].id|0;
+    // Single tile selection
+    var ed = getEditor();
+    if (ed && tiles[idx]) {
+      var id = tiles[idx].id|0;
       if (ed.setBrushId) ed.setBrushId(id);
       switchToPaint();
       close();
-      return;
     }
-
-    // build pattern matrix
-    var ids = new Array(h);
-    var rr, cc;
-    for (rr=0; rr<h; rr++){
-      var row = new Array(w);
-      for (cc=0; cc<w; cc++){
-        var idx = (r.r0 + rr)*colCount + (r.c0 + cc);
-        var t = tiles[idx];
-        row[cc] = t ? (t.id|0) : 0;
-      }
-      ids[rr] = row;
-    }
-    if (ed.setBrushPattern) ed.setBrushPattern({w:w,h:h,ids:ids});
-    switchToPaint();
-    close();
+    e.preventDefault();
   }
+
 
   function switchToPaint(){
     if (typeof window.emSetTool === "function") { window.emSetTool("paint"); return; }
@@ -179,6 +117,7 @@
     var ed = getEditor(); if (ed && ed.on){
       ed.on("tiles:catalog:changed", function(){ if (modal && modal.style.display==="flex") open(); });
       ed.on("assetpool:changed", function(){ if (modal && modal.style.display==="flex") open(); });
+      ed.on("layer:changed", function(){ if (modal && modal.style.display==="flex") open(); });
     }
   }
 

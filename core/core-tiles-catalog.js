@@ -60,13 +60,36 @@
     function setBrushPattern(p){ brushPattern = p || null; if (editor.emit) editor.emit("brush:changed", { pattern: !!brushPattern }); }
     function getBrushPattern(){ return brushPattern; }
 
+    // Layer filtering function - delegates to layer mapping system
+    function getTilesForLayer(layer){
+      if (editor.getTilesForLayer) {
+        return editor.getTilesForLayer(layer);
+      }
+      // Fallback: return all tiles if no layer mapping system
+      return getAllTiles();
+    }
+
     rebuild();
     if (editor.on){
-      editor.on("tilesets:changed", rebuild);
+      editor.on("tilesets:changed", function(data) {
+        console.log("Tilesets changed:", data.tilesets.length, "tilesets loaded");
+        rebuild();
+      });
     }
+
+    // Debug: log when tiles are rebuilt
+    var originalRebuild = rebuild;
+    rebuild = function() {
+      originalRebuild();
+      console.log("Tile catalog rebuilt:", entries.length, "tiles available");
+      if (entries.length > 0) {
+        console.log("First few tiles:", entries.slice(0, 5).map(t => ({id: t.id, col: t.col, row: t.row, tilesetId: t.tilesetId})));
+      }
+    };
 
     editor.getAllTiles = getAllTiles;
     editor.getTileById = getTileById;
+    editor.getTilesForLayer = getTilesForLayer;
     editor.setBrushId = setBrushId;
     editor.getBrushId = getBrushId;
     editor.setBrushPattern = setBrushPattern;

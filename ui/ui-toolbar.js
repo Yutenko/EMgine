@@ -14,6 +14,7 @@
 
   var icons = {
     select: "▭",
+    selectTiles: "⊞",
     paint: "✎",
     pan: "🖐",
     zoomIn: "＋",
@@ -51,7 +52,8 @@
       "." + BTN_CLS + ":active{transform:translateY(1px);}",
       "." + BTN_ACTIVE_CLS + "{border-color:#64b5f6;box-shadow:inset 0 0 0 1px #64b5f6;background:#263445;color:#e7f3ff;}",
       "." + DISABLED_CLS + "{opacity:.45;cursor:not-allowed;filter:grayscale(0.3);}",
-      ".em-toolbar .em-sep{height:1px;background:rgba(255,255,255,0.08);margin:4px 0;}"
+      ".em-toolbar .em-sep{height:1px;background:rgba(255,255,255,0.08);margin:4px 0;}",
+      ".em-brush-status{font-size:10px;color:#9ca3af;text-align:center;padding:2px 4px;border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-top:4px;transition:color 0.2s ease;}"
     ].join("");
     var s = document.createElement("style");
     s.id = STYLE_ID;
@@ -82,9 +84,10 @@
     state.selectedTool = tool;
     var root = document.getElementById(ROOT_ID);
     if (root) {
-      // jetzt inklusive 'select'
+      // tool buttons
       var btns = root.querySelectorAll(
         "." + BTN_CLS + "[data-key='select'], ." +
+        BTN_CLS + "[data-key='selectTiles'], ." +
         BTN_CLS + "[data-key='paint'], ." +
         BTN_CLS + "[data-key='pan']"
       );
@@ -130,11 +133,14 @@
     title.textContent = "Tools";
     root.appendChild(title);
 
-    // Row 1: tool select (Select, Paint, Pan)
+    // Row 1: tool select (Select, Select Tiles, Paint, Pan)
     var row1 = document.createElement("div");
     row1.className = "em-toolbar-row";
     var btnSelect = makeButton("select", "Select (Rechteck)", function () {
       selectTool("select");
+    });
+    var btnSelectTiles = makeButton("selectTiles", "Select Tiles", function () {
+      selectTool("selectTiles");
     });
     var btnPaint = makeButton("paint", "Paint (Tiles)", function () {
       selectTool("paint");
@@ -143,9 +149,16 @@
       selectTool("pan");
     });
     row1.appendChild(btnSelect);
+    row1.appendChild(btnSelectTiles);
     row1.appendChild(btnPaint);
     row1.appendChild(btnPan);
     root.appendChild(row1);
+
+    // Tool status indicator
+    var toolStatus = document.createElement("div");
+    toolStatus.className = "em-brush-status";
+    toolStatus.textContent = "Ready";
+    root.appendChild(toolStatus);
 
     // Row 2: zoom
     var row2 = document.createElement("div");
@@ -186,14 +199,39 @@
 
     document.body.appendChild(root);
 
-    // public sync API (jetzt inkl. select)
+    // public sync API
     window.emSetTool = function (tool) {
-      if (tool !== "paint" && tool !== "pan" && tool !== "select") return;
+      if (tool !== "paint" && tool !== "pan" && tool !== "select" && tool !== "selectTiles") return;
       selectTool(tool);
     };
 
-    // Initial: Paint aktiv
+    // Tool status update
+    function updateToolStatus() {
+      var currentTool = toolMode();
+      if (currentTool === "select") {
+        toolStatus.textContent = "Select";
+        toolStatus.style.color = "#9ca3af";
+      } else if (currentTool === "selectTiles") {
+        toolStatus.textContent = "Select Tiles";
+        toolStatus.style.color = "#ff6b35";
+      } else if (currentTool === "paint") {
+        toolStatus.textContent = "Paint";
+        toolStatus.style.color = "#64b5f6";
+      } else if (currentTool === "pan") {
+        toolStatus.textContent = "Pan";
+        toolStatus.style.color = "#9ca3af";
+      } else {
+        toolStatus.textContent = "Ready";
+        toolStatus.style.color = "#9ca3af";
+      }
+    }
+
+    // Listen for tool changes
+    window.addEventListener("em:setTool", updateToolStatus);
+
+    // Initial: Paint active
     selectTool(state.selectedTool);
+    updateToolStatus();
 
     // Undo/Redo-Status polling (optional)
     function pollUndoRedo() {

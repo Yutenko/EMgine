@@ -30,6 +30,7 @@
   <script src="core/core-render.js"></script>
   <script src="core/core-tilesetimport.js"></script>
   <script src="core/core-tiles-catalog.js"></script>
+  <script src="core/core-tile-layer-mapping.js"></script>
   <script src="core/core-assetpool.js"></script>
 
 
@@ -40,8 +41,9 @@
   <script src="ui/ui-rulers.js"></script>
   <script src="ui/ui-toolbar.js"></script>
   <script src="ui/ui-selection.js"></script>
-  <script src="ui/ui-assets.js"></script> 
+  <script src="ui/ui-assets.js"></script>
   <script src="ui/ui-palette.js"></script>
+  <script src="ui/ui-tile-selector.js"></script>
 
 
   <script>
@@ -49,7 +51,7 @@
       function boot() {
         var canvas = document.getElementById('canvas');
         if (!canvas) {console.error('[boot] no canvas'); return;}
-        var editor = new Editor(canvas, {cols: 64, rows: 64, tileSize: 32, chunkTiles: 32});
+        var editor = new Editor(canvas, {cols: 64, rows: 64, tileSize: 16, chunkTiles: 32});
 
         // Register core modules
         editor.use(EditorWorld);
@@ -62,6 +64,7 @@
         editor.use(EditorRender);
         editor.use(EditorTilesetImport);
         editor.use(EditorTilesCatalog)
+        editor.use(EditorTileLayerMapping);
         editor.use(EditorAssetPool);
 
         window.editor = editor;

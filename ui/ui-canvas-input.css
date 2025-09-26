@@ -1,1 +1,11 @@
 /* Canvas input: no explicit CSS */
+
+/* Tile selector preview */
+.tile-selector-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10051;
+  border: 1px solid #ff6b35;
+  background: rgba(255, 107, 53, 0.1);
+  image-rendering: pixelated;
+}
