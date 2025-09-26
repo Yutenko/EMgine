@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="ui/ui-panel-layers.css">
   <link rel="stylesheet" href="ui/ui-canvas-input.css">
   <link rel="stylesheet" href="ui/ui-selection.css">
+  <link rel="stylesheet" href="ui/ui-assets.css">
+  <link rel="stylesheet" href="ui/ui-palette.css">
 
 </head>
 
@@ -26,6 +28,11 @@
   <script src="core/core-chunks.js"></script>
   <script src="core/core-underlay.js"></script>
   <script src="core/core-render.js"></script>
+  <script src="core/core-tilesetimport.js"></script>
+  <script src="core/core-tiles-catalog.js"></script>
+  <script src="core/core-assetpool.js"></script>
+
+
 
   <!-- UI -->
   <script src="ui/ui-panel-layers.js"></script>
@@ -33,6 +40,9 @@
   <script src="ui/ui-rulers.js"></script>
   <script src="ui/ui-toolbar.js"></script>
   <script src="ui/ui-selection.js"></script>
+  <script src="ui/ui-assets.js"></script> 
+  <script src="ui/ui-palette.js"></script>
+
 
   <script>
     (function () {
@@ -50,6 +60,9 @@
         editor.use(EditorChunks);
         editor.use(EditorUnderlay);
         editor.use(EditorRender);
+        editor.use(EditorTilesetImport);
+        editor.use(EditorTilesCatalog)
+        editor.use(EditorAssetPool);
 
         window.editor = editor;
         document.dispatchEvent(new CustomEvent('editor:ready', {detail: {editor: editor}}));

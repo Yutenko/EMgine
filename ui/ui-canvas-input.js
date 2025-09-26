@@ -94,10 +94,30 @@
     }
 
     function paintAtTile(col, row) {
-      var id = paintButton === 2 ? 0 : 1;
+      // Rechtsklick = löschen einzelnes Tile
+      if (paintButton === 2) {
+        editor.setTile(col | 0, row | 0, 0);
+        return;
+      }
+      // Pattern brush?
+      var pat = editor.getBrushPattern && editor.getBrushPattern();
+      if (pat && pat.w > 0 && pat.h > 0 && pat.ids) {
+        for (var rr = 0; rr < pat.h; rr++) {
+          for (var cc = 0; cc < pat.w; cc++) {
+            var idp = pat.ids[rr][cc] | 0;
+            if (!idp) continue;
+            editor.setTile((col + cc) | 0, (row + rr) | 0, idp);
+          }
+        }
+        return;
+      }
+      // Single brush id
+      var id;
+      if (editor.getBrushId) id = editor.getBrushId();
+      else if (window.emBrushId != null) id = window.emBrushId | 0;
+      else id = 1;
       editor.setTile(col | 0, row | 0, id | 0);
     }
-
     function paintFromEvent(e) {
       var t = tileFromEvent(e);
       if (!t) return;
