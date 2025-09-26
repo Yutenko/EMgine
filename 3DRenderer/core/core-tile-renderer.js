@@ -1,77 +1,105 @@
-// core-tile-renderer.js – main rendering orchestration
+// core-tile-renderer.js - main rendering orchestration
 (function () {
   function install(renderer) {
-    const meshCache = new Map();
-    let renderers = [];
+    var meshCache = {};
+    var renderers = [];
 
     function render() {
       if (!renderer.getMapData()) return;
 
-      // Clear previous frame's tile meshes
-      clearTileMeshes();
+      // Only clear and re-render if map data changed
+      var scene = renderer.getScene();
+      var hasTiles = false;
+      for (var i = 0; i < scene.children.length; i++) {
+        var child = scene.children[i];
+        if (child.userData && child.userData.type === 'tile') {
+          hasTiles = true;
+          break;
+        }
+      }
 
-      // Render each level and layer
-      const levels = renderer.getLevels();
-      levels.forEach((level, levelIndex) => {
-        Object.entries(level.layers).forEach(([layerName, layerData]) => {
-          if (!layerData.visible) return;
-
-          renderLayer(levelIndex, layerName, layerData);
-        });
-      });
+      if (!hasTiles) {
+        renderAllLayers();
+      }
 
       // Call custom renderers
-      renderers.forEach(rendererFn => {
+      for (var j = 0; j < renderers.length; j++) {
         try {
-          rendererFn();
+          renderers[j]();
         } catch (e) {
           console.error('Renderer error:', e);
         }
-      });
+      }
 
       // Render the scene
       renderer.getRenderer().render(renderer.getScene(), renderer.getCamera());
     }
 
-    function clearTileMeshes() {
-      const scene = renderer.getScene();
-      const toRemove = [];
+    function renderAllLayers() {
+      // Clear previous frame's tile meshes only when needed
+      clearTileMeshes();
 
-      scene.children.forEach(child => {
+      // Render each level and layer
+      var levels = renderer.getLevels();
+      if (!levels) return;
+
+      for (var levelIndex = 0; levelIndex < levels.length; levelIndex++) {
+        var level = levels[levelIndex];
+        var layers = level.layers;
+        for (var layerName in layers) {
+          if (layers.hasOwnProperty(layerName)) {
+            var layerData = layers[layerName];
+            if (layerData.visible) {
+              renderLayer(levelIndex, layerName, layerData);
+            }
+          }
+        }
+      }
+    }
+
+    function clearTileMeshes() {
+      var scene = renderer.getScene();
+      var toRemove = [];
+
+      for (var i = 0; i < scene.children.length; i++) {
+        var child = scene.children[i];
         if (child.userData && child.userData.type === 'tile') {
           toRemove.push(child);
         }
-      });
+      }
 
-      toRemove.forEach(child => {
+      for (var j = 0; j < toRemove.length; j++) {
+        var child = toRemove[j];
         scene.remove(child);
         // Dispose geometry and material to free memory
         if (child.geometry) child.geometry.dispose();
         if (child.material) {
           if (Array.isArray(child.material)) {
-            child.material.forEach(mat => mat.dispose());
+            for (var k = 0; k < child.material.length; k++) {
+              child.material[k].dispose();
+            }
           } else {
             child.material.dispose();
           }
         }
-      });
+      }
     }
 
     function renderLayer(levelIndex, layerName, layerData) {
-      const world = renderer.getWorld();
+      var world = renderer.getWorld();
       if (!world) return;
 
-      const tileSize = world.tileSize;
-      const levelData = layerData.data;
-      const tilesets = renderer.getTilesets();
-      const tileCatalog = renderer.getTileCatalog();
+      var tileSize = world.tileSize;
+      var levelData = layerData.data;
+      var tilesets = renderer.getTilesets();
+      var tileCatalog = renderer.getTileCatalog();
 
       // Emit event for custom layer rendering
-      const eventData = {
-        levelIndex,
-        layerName,
-        layerData,
-        world,
+      var eventData = {
+        levelIndex: levelIndex,
+        layerName: layerName,
+        layerData: layerData,
+        world: world,
         skipDefault: false
       };
 
@@ -80,32 +108,34 @@
       if (eventData.skipDefault) return;
 
       // Default layer rendering
-      for (let i = 0; i < levelData.length; i++) {
-        const tileId = levelData[i];
+      var renderedTiles = 0;
+      for (var i = 0; i < levelData.length; i++) {
+        var tileId = levelData[i];
         if (tileId === 0) continue; // Skip empty tiles
 
-        const col = i % world.cols;
-        const row = Math.floor(i / world.cols);
+        var col = i % world.cols;
+        var row = Math.floor(i / world.cols);
 
         renderTile(levelIndex, layerName, tileId, col, row, tileSize);
+        renderedTiles++;
       }
 
-      renderer.emit("layer:render:after", {levelIndex, layerName, layerData});
+      console.log('Layer ' + layerName + ' (Level ' + levelIndex + '): ' + renderedTiles + ' tiles rendered');
     }
 
     function renderTile(levelIndex, layerName, tileId, col, row, tileSize) {
-      const coords = renderer.worldToSceneCoords(col, row, levelIndex);
-      const tileInfo = renderer.getTileById(tileId);
+      var coords = renderer.worldToSceneCoords(col, row, levelIndex);
+      var tileInfo = renderer.getTileById(tileId);
 
       // Emit event for custom tile rendering
-      const eventData = {
-        levelIndex,
-        layerName,
-        tileId,
-        col,
-        row,
-        coords,
-        tileInfo,
+      var eventData = {
+        levelIndex: levelIndex,
+        layerName: layerName,
+        tileId: tileId,
+        col: col,
+        row: row,
+        coords: coords,
+        tileInfo: tileInfo,
         skipDefault: false
       };
 
@@ -114,32 +144,45 @@
       if (eventData.skipDefault) return;
 
       // Default tile rendering
-      const geometry = new THREE.PlaneGeometry(tileSize, tileSize);
-      const material = renderer.getMaterial(layerName, tileId);
+      var geometry = new THREE.PlaneGeometry(tileSize, tileSize);
+      var material = renderer.getMaterial(layerName, tileId);
 
-      const mesh = new THREE.Mesh(geometry, material);
+      var mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(coords.x, coords.y, coords.z);
       mesh.rotation.x = -Math.PI / 2; // Lay flat
       mesh.userData = {
         type: 'tile',
-        levelIndex,
-        layerName,
-        tileId,
-        col,
-        row,
+        levelIndex: levelIndex,
+        layerName: layerName,
+        tileId: tileId,
+        col: col,
+        row: row,
         mapTile: true
       };
 
       // Add to scene
       renderer.getScene().add(mesh);
 
+      // Debug logging for first few tiles
+      var tileMeshes = [];
+      for (var i = 0; i < renderer.getScene().children.length; i++) {
+        var child = renderer.getScene().children[i];
+        if (child.userData && child.userData.type === 'tile') {
+          tileMeshes.push(child);
+        }
+      }
+
+      if (tileMeshes.length <= 5) {
+        console.log('Tile rendered: ' + layerName + ' at (' + col + ', ' + row + ', ' + levelIndex + ') with color ' + material.color.getHexString());
+      }
+
       renderer.emit("tile:render:after", {
-        levelIndex,
-        layerName,
-        tileId,
-        col,
-        row,
-        mesh
+        levelIndex: levelIndex,
+        layerName: layerName,
+        tileId: tileId,
+        col: col,
+        row: row,
+        mesh: mesh
       });
     }
 
@@ -152,7 +195,7 @@
     }
 
     function unregisterRenderer(rendererFn) {
-      const index = renderers.indexOf(rendererFn);
+      var index = renderers.indexOf(rendererFn);
       if (index > -1) {
         renderers.splice(index, 1);
         return true;
@@ -161,14 +204,15 @@
     }
 
     function getRenderStats() {
-      const scene = renderer.getScene();
-      let tileCount = 0;
+      var scene = renderer.getScene();
+      var tileCount = 0;
 
-      scene.children.forEach(child => {
+      for (var i = 0; i < scene.children.length; i++) {
+        var child = scene.children[i];
         if (child.userData && child.userData.type === 'tile') {
           tileCount++;
         }
-      });
+      }
 
       return {
         tileMeshes: tileCount,

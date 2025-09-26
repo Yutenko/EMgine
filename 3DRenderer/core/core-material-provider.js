@@ -1,44 +1,45 @@
-// core-material-provider.js – material and texture management
+// core-material-provider.js - material and texture management
 (function () {
   function install(renderer) {
-    const materials = new Map();
-    const textures = new Map();
-    let materialProviders = [];
+    var materials = {};
+    var textures = {};
+    var materialProviders = [];
 
     function getMaterial(layerName, tileId) {
-      const key = `${layerName}_${tileId}`;
+      var key = String(layerName) + '_' + String(tileId);
 
       // Check cache first
-      if (materials.has(key)) {
-        return materials.get(key);
+      if (materials[key]) {
+        return materials[key];
       }
 
       // Try custom providers first
-      for (const provider of materialProviders) {
-        const material = provider.getMaterial(layerName, tileId);
+      for (var i = 0; i < materialProviders.length; i++) {
+        var provider = materialProviders[i];
+        var material = provider.getMaterial(layerName, tileId);
         if (material) {
-          materials.set(key, material);
+          materials[key] = material;
           return material;
         }
       }
 
       // Fall back to default material
-      const material = createDefaultMaterial(layerName, tileId);
-      materials.set(key, material);
+      var material = createDefaultMaterial(layerName, tileId);
+      materials[key] = material;
       return material;
     }
 
     function createDefaultMaterial(layerName, tileId) {
-      const color = getLayerColor(layerName);
+      var color = getLayerColor(layerName);
       return new THREE.MeshLambertMaterial({
         color: color,
-        transparent: true,
-        opacity: 0.9
+        transparent: false,
+        opacity: 1.0
       });
     }
 
     function getLayerColor(layerName) {
-      const colors = {
+      var colors = {
         floor: 0x4FC3F7,      // Light blue
         wall: 0xFF8A65,       // Orange
         decor: 0xBA68C8,      // Purple
@@ -51,18 +52,18 @@
     }
 
     function loadTexture(url, name) {
-      return new Promise((resolve, reject) => {
-        const loader = new THREE.TextureLoader();
+      return new Promise(function(resolve, reject) {
+        var loader = new THREE.TextureLoader();
         loader.load(
           url,
-          (texture) => {
-            textures.set(name, texture);
-            renderer.emit('texture:loaded', {name, texture, url});
+          function(texture) {
+            textures[name] = texture;
+            renderer.emit('texture:loaded', {name: name, texture: texture, url: url});
             resolve(texture);
           },
           undefined,
-          (error) => {
-            renderer.emit('texture:error', {name, url, error});
+          function(error) {
+            renderer.emit('texture:error', {name: name, url: url, error: error});
             reject(error);
           }
         );
@@ -70,7 +71,7 @@
     }
 
     function getTexture(name) {
-      return textures.get(name) || null;
+      return textures[name] || null;
     }
 
     function registerMaterialProvider(provider) {
@@ -83,7 +84,7 @@
     }
 
     function unregisterMaterialProvider(provider) {
-      const index = materialProviders.indexOf(provider);
+      var index = materialProviders.indexOf(provider);
       if (index > -1) {
         materialProviders.splice(index, 1);
         renderer.emit('material-provider:unregistered', provider);
@@ -93,7 +94,7 @@
     }
 
     function createMaterialFromTexture(texture, color) {
-      const material = new THREE.MeshLambertMaterial({
+      var material = new THREE.MeshLambertMaterial({
         map: texture,
         transparent: true
       });
@@ -113,14 +114,24 @@
     }
 
     function clearMaterialCache() {
-      materials.clear();
+      materials = {};
       renderer.emit('materials:cleared');
     }
 
     function getMaterialStats() {
+      var cachedCount = 0;
+      for (var key in materials) {
+        if (materials.hasOwnProperty(key)) cachedCount++;
+      }
+
+      var texturesCount = 0;
+      for (var textureKey in textures) {
+        if (textures.hasOwnProperty(textureKey)) texturesCount++;
+      }
+
       return {
-        cached: materials.size,
-        textures: textures.size,
+        cached: cachedCount,
+        textures: texturesCount,
         providers: materialProviders.length
       };
     }

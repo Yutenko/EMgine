@@ -154,12 +154,13 @@
         });
 
         // Camera preset buttons
-        document.querySelectorAll('.camera-preset').forEach(button => {
-            button.addEventListener('click', function() {
-                const preset = this.getAttribute('data-preset');
+        var presetButtons = document.querySelectorAll('.camera-preset');
+        for (var i = 0; i < presetButtons.length; i++) {
+            presetButtons[i].addEventListener('click', function() {
+                var preset = this.getAttribute('data-preset');
                 renderer.setCameraPreset(preset);
             });
-        });
+        }
 
         // Fit camera button
         document.getElementById('fitCamera').addEventListener('click', function() {
@@ -187,6 +188,11 @@
         renderer.on('map:loaded', function(data) {
             updateStats();
             console.log('Map loaded:', data);
+
+            // Auto-fit camera to show the entire map
+            setTimeout(function() {
+                renderer.fitCameraToWorld(1.2);
+            }, 100);
         });
 
         renderer.on('world:resize', function(data) {

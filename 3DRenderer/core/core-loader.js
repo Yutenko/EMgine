@@ -1,10 +1,10 @@
-// core-loader.js – JSON map data loading and parsing
+// core-loader.js - JSON map data loading and parsing
 (function () {
   function install(renderer) {
-    let mapData = null;
-    let tilesets = [];
-    let tileCatalog = [];
-    let levels = [];
+    var mapData = null;
+    var tilesets = [];
+    var tileCatalog = [];
+    var levels = [];
 
     function loadMapData(jsonData) {
       if (!jsonData || typeof jsonData !== 'object') {
@@ -18,9 +18,9 @@
       levels = jsonData.levels || [];
 
       // Update world size based on loaded data
-      const metadata = jsonData.metadata;
+      var metadata = jsonData.metadata;
       if (metadata && metadata.world) {
-        const world = metadata.world;
+        var world = metadata.world;
         renderer.setWorldSize(world.cols, world.rows, levels.length);
       }
 
@@ -40,17 +40,17 @@
     }
 
     function loadMapFile(file) {
-      return new Promise((resolve, reject) => {
+      return new Promise(function(resolve, reject) {
         if (!file) {
           reject(new Error('No file provided'));
           return;
         }
 
-        const reader = new FileReader();
+        var reader = new FileReader();
         reader.onload = function(e) {
           try {
-            const jsonData = JSON.parse(e.target.result);
-            const result = loadMapData(jsonData);
+            var jsonData = JSON.parse(e.target.result);
+            var result = loadMapData(jsonData);
             resolve(result);
           } catch (error) {
             reject(new Error('Failed to parse JSON file: ' + error.message));
@@ -65,34 +65,41 @@
 
     function loadMapFromUrl(url) {
       return fetch(url)
-        .then(response => {
+        .then(function(response) {
           if (!response.ok) {
             throw new Error('Failed to fetch map data from URL');
           }
           return response.json();
         })
-        .then(jsonData => loadMapData(jsonData))
-        .catch(error => {
+        .then(function(jsonData) {
+          return loadMapData(jsonData);
+        })
+        .catch(function(error) {
           throw new Error('Failed to load map from URL: ' + error.message);
         });
     }
 
     function createTileLookupMap() {
-      const lookup = new Map();
+      var lookup = {};
 
-      tileCatalog.forEach(tile => {
-        lookup.set(tile.id, tile);
-      });
+      for (var i = 0; i < tileCatalog.length; i++) {
+        var tile = tileCatalog[i];
+        lookup[tile.id] = tile;
+      }
 
       renderer.tileLookup = lookup;
     }
 
     function getTileById(tileId) {
-      return renderer.tileLookup ? renderer.tileLookup.get(tileId) : null;
+      return renderer.tileLookup ? renderer.tileLookup[tileId] : null;
     }
 
     function getTilesetById(tilesetId) {
-      return tilesets.find(ts => ts.id === tilesetId) || null;
+      for (var i = 0; i < tilesets.length; i++) {
+        var ts = tilesets[i];
+        if (ts.id === tilesetId) return ts;
+      }
+      return null;
     }
 
     function getMapData() {
@@ -118,18 +125,21 @@
       levels = [];
 
       if (renderer.tileLookup) {
-        renderer.tileLookup.clear();
+        renderer.tileLookup = {};
       }
 
       // Clear scene
-      const scene = renderer.getScene();
-      const toRemove = [];
-      scene.children.forEach(child => {
+      var scene = renderer.getScene();
+      var toRemove = [];
+      for (var i = 0; i < scene.children.length; i++) {
+        var child = scene.children[i];
         if (child.userData && child.userData.mapTile) {
           toRemove.push(child);
         }
-      });
-      toRemove.forEach(child => scene.remove(child));
+      }
+      for (var j = 0; j < toRemove.length; j++) {
+        scene.remove(toRemove[j]);
+      }
 
       renderer.emit("map:cleared");
       renderer.requestRender();

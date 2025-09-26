@@ -1,4 +1,4 @@
-// core-camera.js – camera controls and positioning
+// core-camera.js - camera controls and positioning
 (function () {
   function install(renderer) {
     function setCameraPosition(x, y, z) {
@@ -12,30 +12,31 @@
     }
 
     function setCameraPreset(preset) {
-      const world = renderer.getWorld();
+      var world = renderer.getWorld();
       if (!world) return;
 
-      const centerX = 0;
-      const centerZ = 0;
-      const worldHeight = world.height;
-      const worldWidth = world.width;
+      var centerX = 0;
+      var centerZ = 0;
+      var worldHeight = world.height;
+      var worldWidth = world.width;
+      var maxDim = Math.max(worldWidth, worldHeight);
 
       switch (preset) {
         case 'isometric':
-          setCameraPosition(worldWidth * 0.8, worldHeight * 0.6, worldWidth * 0.8);
+          setCameraPosition(maxDim * 0.7, maxDim * 0.5, maxDim * 0.7);
           setCameraTarget(centerX, 0, centerZ);
           break;
         case 'top-down':
-          setCameraPosition(centerX, worldHeight * 1.5, centerZ);
+          setCameraPosition(centerX, maxDim * 1.2, centerZ);
           setCameraTarget(centerX, 0, centerZ);
           break;
         case 'side':
-          setCameraPosition(worldWidth * 1.2, worldHeight * 0.5, centerZ);
+          setCameraPosition(maxDim * 1.1, maxDim * 0.4, centerZ);
           setCameraTarget(centerX, 0, centerZ);
           break;
         case 'orbit':
         default:
-          setCameraPosition(0, worldHeight * 0.8, worldHeight * 1.2);
+          setCameraPosition(maxDim * 0.6, maxDim * 0.7, maxDim * 1.0);
           setCameraTarget(centerX, 0, centerZ);
           break;
       }
@@ -46,13 +47,13 @@
         renderer.orbitControls.dispose();
       }
 
-      const OrbitControls = (global.THREE && global.THREE.OrbitControls) || require('three/examples/js/controls/OrbitControls.js');
+      var OrbitControls = (window.THREE && window.THREE.OrbitControls);
       if (!OrbitControls) {
-        console.warn('OrbitControls not available. Install three/examples/js/controls/OrbitControls.js');
+        console.warn('OrbitControls not available. Please ensure Three.js OrbitControls are loaded.');
         return;
       }
 
-      const controls = new OrbitControls(renderer.camera, renderer.renderer.domElement);
+      var controls = new OrbitControls(renderer.camera, renderer.renderer.domElement);
       controls.enableDamping = options.damping !== false;
       controls.dampingFactor = options.dampingFactor || 0.05;
       controls.screenSpacePanning = options.screenSpacePanning !== false;
@@ -63,7 +64,7 @@
       renderer.orbitControls = controls;
 
       // Emit events for control changes
-      controls.addEventListener('change', () => {
+      controls.addEventListener('change', function() {
         renderer.emit('camera:change', {
           position: renderer.camera.position.clone(),
           target: controls.target.clone()
@@ -82,14 +83,14 @@
     }
 
     function fitCameraToWorld(padding) {
-      const world = renderer.getWorld();
+      var world = renderer.getWorld();
       if (!world) return;
 
       padding = padding || 1.2;
-      const maxDim = Math.max(world.width, world.height, world.depth);
+      var maxDim = Math.max(world.width, world.height, world.depth);
 
-      const fov = renderer.camera.fov * (Math.PI / 180);
-      const cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * padding;
+      var fov = renderer.camera.fov * (Math.PI / 180);
+      var cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * padding;
 
       setCameraPosition(0, cameraZ, cameraZ);
       setCameraTarget(0, 0, 0);
