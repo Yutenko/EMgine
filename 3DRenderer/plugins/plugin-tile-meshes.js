@@ -61,7 +61,6 @@
 
     // Register custom tile renderer for special tile types
     renderer.registerRenderer(function() {
-      // This renderer handles special rendering cases
       var scene = renderer.getScene();
       var mapData = renderer.getMapData();
 

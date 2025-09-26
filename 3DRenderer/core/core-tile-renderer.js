@@ -1,7 +1,6 @@
 // core-tile-renderer.js - main rendering orchestration
 (function () {
   function install(renderer) {
-    var meshCache = {};
     var renderers = [];
 
     function render() {
@@ -91,8 +90,6 @@
 
       var tileSize = world.tileSize;
       var levelData = layerData.data;
-      var tilesets = renderer.getTilesets();
-      var tileCatalog = renderer.getTileCatalog();
 
       // Emit event for custom layer rendering
       var eventData = {

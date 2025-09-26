@@ -81,12 +81,10 @@
 
     function createTileLookupMap() {
       var lookup = {};
-
       for (var i = 0; i < tileCatalog.length; i++) {
         var tile = tileCatalog[i];
         lookup[tile.id] = tile;
       }
-
       renderer.tileLookup = lookup;
     }
 

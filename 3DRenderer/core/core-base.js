@@ -8,7 +8,7 @@
 
     // Three.js core components
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(75, global.innerWidth / global.innerHeight, 0.1, 1000);
     this.renderer = new THREE.WebGLRenderer({
       antialias: opts.antialias !== false,
       alpha: opts.alpha || false

@@ -96,7 +96,7 @@
     function createMaterialFromTexture(texture, color) {
       var material = new THREE.MeshLambertMaterial({
         map: texture,
-        transparent: true
+        transparent: false
       });
 
       if (color) {

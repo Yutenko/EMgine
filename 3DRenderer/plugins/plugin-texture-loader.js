@@ -2,20 +2,11 @@
 (function () {
   function install(renderer) {
     var textureCache = {};
-    var textureLoader = null;
-
-    function initTextureLoader() {
-      if (!textureLoader) {
-        textureLoader = new THREE.TextureLoader();
-      }
-    }
 
     function loadTilesetTextures(tileset) {
       if (!tileset || !tileset.image) return Promise.resolve([]);
 
       return new Promise(function(resolve, reject) {
-        initTextureLoader();
-
         var textureUrl = tileset.image;
         var cacheKey = 'tileset_' + tileset.id;
 
@@ -25,7 +16,8 @@
           return;
         }
 
-        textureLoader.load(
+        var loader = new THREE.TextureLoader();
+        loader.load(
           textureUrl,
           function(texture) {
             // Configure texture

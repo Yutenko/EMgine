@@ -47,6 +47,7 @@
         renderer.orbitControls.dispose();
       }
 
+      // Load OrbitControls dynamically for Three.js r180
       var OrbitControls = (window.THREE && window.THREE.OrbitControls);
       if (!OrbitControls) {
         console.warn('OrbitControls not available. Please ensure Three.js OrbitControls are loaded.');

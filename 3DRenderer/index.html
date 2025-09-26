@@ -98,10 +98,17 @@
         </div>
     </div>
 
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js Library r180 with modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/"
+      }
+    }
+    </script>
 
-    <!-- 3DRenderer Core -->
+    <!-- Core plugins -->
     <script src="core/core-base.js"></script>
     <script src="core/core-world.js"></script>
     <script src="core/core-camera.js"></script>
@@ -109,18 +116,18 @@
     <script src="core/core-material-provider.js"></script>
     <script src="core/core-tile-renderer.js"></script>
 
-    <!-- 3DRenderer Plugins -->
+    <!-- Example plugins -->
     <script src="plugins/plugin-tile-meshes.js"></script>
     <script src="plugins/plugin-texture-loader.js"></script>
 
     <script>
-        // Initialize 3DRenderer
+        // Initialize 3DRenderer with Three.js r180
         const renderer = new ThreeRenderer(document.body, {
             antialias: true,
             alpha: false
         });
 
-        // Install core plugins
+        // Install all core plugins
         renderer.use(RendererWorld);
         renderer.use(RendererCamera);
         renderer.use(RendererLoader);
@@ -154,10 +161,10 @@
         });
 
         // Camera preset buttons
-        var presetButtons = document.querySelectorAll('.camera-preset');
-        for (var i = 0; i < presetButtons.length; i++) {
+        const presetButtons = document.querySelectorAll('.camera-preset');
+        for (let i = 0; i < presetButtons.length; i++) {
             presetButtons[i].addEventListener('click', function() {
-                var preset = this.getAttribute('data-preset');
+                const preset = this.getAttribute('data-preset');
                 renderer.setCameraPreset(preset);
             });
         }
@@ -224,7 +231,8 @@
             // The renderer handles resize automatically via the base plugin
         });
 
-        console.log('3DRenderer initialized. Load a JSON map file to get started!');
+        console.log('3DRenderer initialized with Three.js r180. Load a JSON map file to get started!');
     </script>
+
 </body>
 </html>

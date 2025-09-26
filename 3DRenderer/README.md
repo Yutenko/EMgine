@@ -1,10 +1,18 @@
-# 3DRenderer - Three.js Plugin Architecture
+# 3DRenderer - Three.js r180 Plugin Architecture
 
-A modular 3D renderer built with Three.js that uses the same plugin architecture as your tile editor. This renderer can load JSON map files exported from the editor and display them in 3D space with full extensibility through plugins.
+A modular 3D renderer built with Three.js r180 that uses the same plugin architecture as your tile editor. This renderer can load JSON map files exported from the editor and display them in 3D space with full extensibility through plugins.
+
+**Updated for Three.js r180** with modern import maps, source map support, and plain JavaScript ES5 compatibility.
 
 ## Architecture Overview
 
-The 3DRenderer follows the same plugin pattern as your editor, where each core module is a function that extends the main renderer instance. This provides identical flexibility and modularity for 3D rendering.
+The 3DRenderer follows the same plugin pattern as your editor, where each core module is a plain JavaScript function that extends the main renderer instance. This provides identical flexibility and modularity for 3D rendering with modern Three.js r180.
+
+**Three.js r180 Features:**
+- Modern import maps for module resolution
+- Enhanced WebGL performance and features
+- Source map support for debugging
+- ES5 compatible codebase with modern Three.js
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -231,8 +239,15 @@ renderer.registerRenderer(customRenderer);
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3DRenderer Example</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>3DRenderer r180 Example</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/"
+      }
+    }
+    </script>
 </head>
 <body>
     <div id="renderer"></div>
@@ -246,7 +261,8 @@ renderer.registerRenderer(customRenderer);
     <script src="core/core-tile-renderer.js"></script>
 
     <script>
-        const renderer = new ThreeRenderer(document.getElementById('renderer'));
+        // Initialize 3DRenderer with Three.js r180
+        const renderer = new ThreeRenderer(document.body);
 
         // Install all core plugins
         renderer.use(RendererWorld);
@@ -260,6 +276,29 @@ renderer.registerRenderer(customRenderer);
     </script>
 </body>
 </html>
+```
+
+### Advanced Setup
+
+```javascript
+// Initialize renderer
+const renderer = new ThreeRenderer(document.body, {
+    antialias: true,
+    alpha: false
+});
+
+// Install core plugins (same API as before)
+renderer.use(RendererWorld);
+renderer.use(RendererCamera);
+renderer.use(RendererLoader);
+renderer.use(RendererMaterialProvider);
+renderer.use(RendererTileRenderer);
+
+// Add custom plugins
+renderer.use(MyCustomPlugin);
+
+// Load your map
+renderer.loadMapFile('path/to/map-export.json');
 ```
 
 ### Advanced Setup with Plugins
@@ -334,8 +373,10 @@ The architecture is designed to be familiar if you're coming from the tile edito
 ## Browser Support
 
 - Modern browsers with WebGL support
-- Three.js r128+ recommended
-- ES5 compatible for broader browser support
+- Three.js r180 (latest stable) with import map support
+- ES5 compatible codebase (works in older browsers)
+- Source map support for development and debugging
+- Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+
 
 ## License
 
