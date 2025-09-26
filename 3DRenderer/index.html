@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3DRenderer - Three.js Map Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        #ui h3 {
+            margin: 0 0 15px 0;
+            color: #4FC3F7;
+        }
+
+        #ui button {
+            background: #4FC3F7;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #ui button:hover {
+            background: #29B6F6;
+        }
+
+        #ui button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #fileInput {
+            margin: 10px 0;
+        }
+
+        #stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+        }
+
+        #camera-controls {
+            margin-top: 15px;
+        }
+
+        .camera-preset {
+            display: inline-block;
+            margin: 2px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3>3DRenderer</h3>
+
+        <div>
+            <input type="file" id="fileInput" accept=".json">
+            <button id="loadButton">Load Map</button>
+        </div>
+
+        <div id="camera-controls">
+            <div><strong>Camera Presets:</strong></div>
+            <button class="camera-preset" data-preset="orbit">Orbit</button>
+            <button class="camera-preset" data-preset="isometric">Isometric</button>
+            <button class="camera-preset" data-preset="top-down">Top Down</button>
+            <button class="camera-preset" data-preset="side">Side</button>
+            <br>
+            <button id="fitCamera">Fit to World</button>
+            <button id="toggleOrbitControls">Enable Orbit Controls</button>
+        </div>
+
+        <div id="stats">
+            <div>No map loaded</div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- 3DRenderer Core -->
+    <script src="core/core-base.js"></script>
+    <script src="core/core-world.js"></script>
+    <script src="core/core-camera.js"></script>
+    <script src="core/core-loader.js"></script>
+    <script src="core/core-material-provider.js"></script>
+    <script src="core/core-tile-renderer.js"></script>
+
+    <!-- 3DRenderer Plugins -->
+    <script src="plugins/plugin-tile-meshes.js"></script>
+    <script src="plugins/plugin-texture-loader.js"></script>
+
+    <script>
+        // Initialize 3DRenderer
+        const renderer = new ThreeRenderer(document.body, {
+            antialias: true,
+            alpha: false
+        });
+
+        // Install core plugins
+        renderer.use(RendererWorld);
+        renderer.use(RendererCamera);
+        renderer.use(RendererLoader);
+        renderer.use(RendererMaterialProvider);
+        renderer.use(RendererTileRenderer);
+
+        // Install example plugins
+        renderer.use(TileMeshesPlugin);
+        renderer.use(TextureLoaderPlugin);
+
+        let orbitControlsEnabled = false;
+
+        // UI Event Listeners
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('loadButton').textContent = 'Loading...';
+                document.getElementById('loadButton').disabled = true;
+
+                renderer.loadMapFile(file).then(() => {
+                    document.getElementById('loadButton').textContent = 'Load Map';
+                    document.getElementById('loadButton').disabled = false;
+                    updateStats();
+                }).catch(error => {
+                    console.error('Failed to load map:', error);
+                    alert('Failed to load map: ' + error.message);
+                    document.getElementById('loadButton').textContent = 'Load Map';
+                    document.getElementById('loadButton').disabled = false;
+                });
+            }
+        });
+
+        // Camera preset buttons
+        document.querySelectorAll('.camera-preset').forEach(button => {
+            button.addEventListener('click', function() {
+                const preset = this.getAttribute('data-preset');
+                renderer.setCameraPreset(preset);
+            });
+        });
+
+        // Fit camera button
+        document.getElementById('fitCamera').addEventListener('click', function() {
+            renderer.fitCameraToWorld(1.5);
+        });
+
+        // Toggle orbit controls
+        document.getElementById('toggleOrbitControls').addEventListener('click', function() {
+            if (orbitControlsEnabled) {
+                renderer.disableOrbitControls();
+                orbitControlsEnabled = false;
+                this.textContent = 'Enable Orbit Controls';
+            } else {
+                renderer.enableOrbitControls({
+                    damping: true,
+                    dampingFactor: 0.05,
+                    screenSpacePanning: false
+                });
+                orbitControlsEnabled = true;
+                this.textContent = 'Disable Orbit Controls';
+            }
+        });
+
+        // Event listeners for UI updates
+        renderer.on('map:loaded', function(data) {
+            updateStats();
+            console.log('Map loaded:', data);
+        });
+
+        renderer.on('world:resize', function(data) {
+            updateStats();
+        });
+
+        function updateStats() {
+            const mapData = renderer.getMapData();
+            const world = renderer.getWorld();
+            const renderStats = renderer.getRenderStats ? renderer.getRenderStats() : {};
+
+            if (mapData && world) {
+                document.getElementById('stats').innerHTML = `
+                    <div><strong>Map Info:</strong></div>
+                    <div>Size: ${world.cols}×${world.rows}×${world.levels}</div>
+                    <div>Tile Size: ${world.tileSize}px</div>
+                    <div>Levels: ${mapData.levels.length}</div>
+                    <div>Tilesets: ${mapData.tilesets.length}</div>
+                    <div>Tile Types: ${mapData.tileCatalog.length}</div>
+                    ${renderStats.tileMeshes ? `<div>Rendered Tiles: ${renderStats.tileMeshes}</div>` : ''}
+                `;
+            } else {
+                document.getElementById('stats').innerHTML = '<div>No map loaded</div>';
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // The renderer handles resize automatically via the base plugin
+        });
+
+        console.log('3DRenderer initialized. Load a JSON map file to get started!');
+    </script>
+</body>
+</html>
