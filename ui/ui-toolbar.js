@@ -35,7 +35,7 @@
     var links = document.querySelectorAll('link[rel="stylesheet"]');
     for (var i = 0; i < links.length; i++) {
       var href = (links[i].getAttribute("href") || "").toLowerCase();
-      if (href.indexOf("editor-toolbar.css") !== -1) return true;
+      if (href.indexOf("ui-toolbar.css") !== -1) return true;
     }
     return false;
   }

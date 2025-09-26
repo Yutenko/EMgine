@@ -40,7 +40,6 @@
         var canvas = document.getElementById('canvas');
         if (!canvas) {console.error('[boot] no canvas'); return;}
         var editor = new Editor(canvas, {cols: 64, rows: 64, tileSize: 32, chunkTiles: 32});
-        editor.opts = {cols: 64, rows: 64, tileSize: 32, chunkTiles: 32};
 
         // Register core modules
         editor.use(EditorWorld);
