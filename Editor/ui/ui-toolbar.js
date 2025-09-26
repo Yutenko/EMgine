@@ -20,7 +20,8 @@
     zoomIn: "＋",
     zoomOut: "－",
     undo: "↶",
-    redo: "↷"
+    redo: "↷",
+    export: "💾"
   };
   var state = { selectedTool: "paint" };
 
@@ -184,7 +185,7 @@
     sep.className = "em-sep";
     root.appendChild(sep);
 
-    // Row 3: history
+    // Row 3: history and export
     var row3 = document.createElement("div");
     row3.className = "em-toolbar-row";
     var btnUndo = makeButton("undo", "Undo (Ctrl+Z)", function () {
@@ -193,8 +194,12 @@
     var btnRedo = makeButton("redo", "Redo (Ctrl+Y / Ctrl+Shift+Z)", function () {
       if (canCall(window.editor, "redo")) window.editor.redo();
     });
+    var btnExport = makeButton("export", "Export JSON (Ctrl+E)", function () {
+      if (canCall(window.editor, "showExportDialog")) window.editor.showExportDialog();
+    });
     row3.appendChild(btnUndo);
     row3.appendChild(btnRedo);
+    row3.appendChild(btnExport);
     root.appendChild(row3);
 
     document.body.appendChild(root);

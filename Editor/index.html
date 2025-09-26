@@ -32,6 +32,7 @@
   <script src="core/core-tiles-catalog.js"></script>
   <script src="core/core-tile-layer-mapping.js"></script>
   <script src="core/core-assetpool.js"></script>
+  <script src="core/core-export.js"></script>
 
 
 
@@ -66,6 +67,7 @@
         editor.use(EditorTilesCatalog)
         editor.use(EditorTileLayerMapping);
         editor.use(EditorAssetPool);
+        editor.use(EditorExport);
 
         window.editor = editor;
         document.dispatchEvent(new CustomEvent('editor:ready', {detail: {editor: editor}}));

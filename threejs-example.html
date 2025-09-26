@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Map Viewer - Example</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Three.js Map Viewer</h3>
+        <p>Load a JSON export from the tile editor</p>
+        <input type="file" id="fileInput" accept=".json">
+        <br><br>
+        <div id="stats">No file loaded</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Three.js Map Viewer Example
+        let scene, camera, renderer, mapData;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            camera.position.set(0, 10, 20);
+            camera.lookAt(0, 0, 0);
+
+            // Add some lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(ambientLight, directionalLight);
+
+            animate();
+        }
+
+        function loadMapData(jsonData) {
+            mapData = jsonData;
+            document.getElementById('stats').innerHTML = `
+                Map: ${mapData.metadata.world.cols}x${mapData.metadata.world.rows} tiles<br>
+                Tile Size: ${mapData.metadata.world.tileSize}px<br>
+                Levels: ${mapData.levels.length}<br>
+                Tilesets: ${mapData.tilesets.length}
+            `;
+
+            // Clear previous geometry
+            while(scene.children.length > 2) { // Keep lights
+                scene.remove(scene.children[2]);
+            }
+
+            // Create 3D geometry from map data
+            createMapGeometry();
+        }
+
+        function createMapGeometry() {
+            if (!mapData) return;
+
+            const tileSize = mapData.metadata.world.tileSize;
+            const worldWidth = mapData.metadata.world.width;
+            const worldHeight = mapData.metadata.world.height;
+
+            // Center the map
+            const offsetX = -worldWidth / 2;
+            const offsetZ = -worldHeight / 2;
+
+            mapData.levels.forEach((level, levelIndex) => {
+                Object.entries(level.layers).forEach(([layerName, layerData]) => {
+                    if (!layerData.visible) return;
+
+                    const geometry = new THREE.PlaneGeometry(tileSize, tileSize);
+                    const material = new THREE.MeshLambertMaterial({
+                        color: getLayerColor(layerName),
+                        transparent: true,
+                        opacity: 0.8
+                    });
+
+                    layerData.data.forEach((tileId, index) => {
+                        if (tileId === 0) return; // Skip empty tiles
+
+                        const x = (index % mapData.metadata.world.cols) * tileSize + offsetX;
+                        const z = Math.floor(index / mapData.metadata.world.cols) * tileSize + offsetZ;
+                        const y = levelIndex * 2; // Stack levels vertically
+
+                        const tile = new THREE.Mesh(geometry, material);
+                        tile.position.set(x, y, z);
+                        tile.rotation.x = -Math.PI / 2; // Lay flat
+                        scene.add(tile);
+                    });
+                });
+            });
+        }
+
+        function getLayerColor(layerName) {
+            const colors = {
+                floor: 0x4FC3F7,
+                wall: 0xFF8A65,
+                decor: 0xBA68C8,
+                entities: 0xFFF176
+            };
+            return colors[layerName] || 0x888888;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        loadMapData(jsonData);
+                        console.log('Map loaded successfully:', jsonData);
+                    } catch (error) {
+                        console.error('Error parsing JSON:', error);
+                        alert('Error loading map file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
