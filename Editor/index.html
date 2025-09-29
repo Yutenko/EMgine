@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor (Refactor Full)</title>
+  <link rel="stylesheet" href="editor.css">
+
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+
+  <!-- Core (engine) -->
+  <script src="core/core-base.js"></script>
+  <script src="core/core-world.js"></script>
+  <script src="core/core-camera.js"></script>
+  <script src="core/core-grid.js"></script>
+  <script src="core/core-history.js"></script>
+  <script src="core/core-levels.js"></script>
+  <script src="core/core-chunks.js"></script>
+  <script src="core/core-underlay.js"></script>
+  <script src="core/core-render.js"></script>
+  <script src="core/core-rulers.js"></script>
+
+
+
+
+
+  <script>
+    (function () {
+      function boot() {
+        var canvas = document.getElementById('canvas');
+        if (!canvas) {console.error('[boot] no canvas'); return;}
+        var editor = new Editor(canvas, {
+          tileSize: 32, cols: 64, rows: 64, chunkTiles: 32,
+          tileLayers: ["tiles", "wall", "deco"],   // frei wählbar
+          layerTints: {tiles: "#4FC3F7", wall: "#FF8A65", deco: "#BA68C8"},
+          defaultLayer: "tiles"
+        });
+
+        editor
+          .use(EditorWorld)
+          .use(EditorCamera)
+          .use(EditorGrid)
+          .use(EditorLevels)   // liest tileLayers/tints/defaultLayer aus opts
+          .use(EditorChunks)
+          .use(EditorUnderlay)
+          .use(EditorRender)
+          .use(EditorRulers)
+
+        editor.setGridStyle({spacing: 0, offsetX: 0, offsetY: 0});
+
+
+        window.editor = editor;
+        document.dispatchEvent(new CustomEvent('editor:ready', {detail: {editor: editor}}));
+        console.log('[boot] editor ready');
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>
+</body>
+
+</html>
