@@ -40,6 +40,10 @@
   <!-- Renderer zuletzt (ordnet die Draw-Reihenfolge) -->
   <script src="core/core-render.js"></script>
 
+  <script src="core/ecs.js"></script>
+  <script src="core/components.js"></script>
+  <script src="core/prefabs.js"></script>
+
 
 
   <script>
@@ -128,6 +132,36 @@
       } else {
         boot();
       }
+
+
+      /* ===========================
+      * ECS / Components / Prefabs
+      * =========================== */
+      var ecs = ECS.create();
+      registerStarterComponents(ecs);
+      registerExamplePrefabs(ecs);
+
+      // Entities erzeugen
+      var e1 = ecs.prefabs.spawn(ecs.entities, {prefabId: "wall_thick", at: {x: 10, y: 5, level: 0}});
+      var e2 = ecs.prefabs.spawn(ecs.entities, {prefabId: "floor_snow", at: {x: 10, y: 6, level: 0}});
+      var e3 = ecs.prefabs.spawn(ecs.entities, {prefabId: "zone_hurt_lava", overrides: {Geometry: {params: {size: [3, 2]}}}, at: {x: 8, y: 4, level: 0}});
+      var e4 = ecs.prefabs.spawn(ecs.entities, {prefabId: "door_wood", at: {x: 12, y: 5, level: 0}});
+
+      // Zugriff auf Komponenten
+      var g1 = ecs.components.get(e1, "Geometry");      // {type:"tile", shape:"thick", ...}
+      var m1 = ecs.components.get(e1, "Material");      // {defaultTexture:"brick_01", ...}
+      var p1 = ecs.components.get(e1, "Physics");       // {collidable:true,...}
+
+      // Query: alle renderbaren Dinge (Geometry + Material)
+      var renderIds = ecs.query.allWith(["Geometry", "Material"]);
+
+      // Save/Load
+      var saveData = ecs.serializer.save();
+      console.log("Save Data:", saveData);
+
+      // ... persistieren ...
+      // ecs.serializer.load(saveData);  // (lädt Additiv – du kannst vorher resetten)
+
     })();
   </script>
 </body>
