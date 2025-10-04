@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All-in-One Map Viewer · Three.js InstancedMesh (Textur an/aus)</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0f14; color: #eee; font-family: system-ui, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #hud { position: fixed; left: 12px; top: 12px; background: rgba(0,0,0,.45); padding: 10px 12px; border-radius: 10px; backdrop-filter: blur(6px); }
+    #hud b { color: #b6f; }
+    a.btn { display: inline-block; margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: #1e2633; color: #9cf; text-decoration: none; }
+    a.btn:hover { background: #263146; }
+    select, input[type="checkbox"] { background:#0f1622; color:#dbe9ff; border:1px solid #28374d; padding:4px 8px; border-radius:8px; }
+    label { font-size: 12px; opacity:.9; margin-left: 6px; user-select: none; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.164.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.164.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud">
+    <div><b>All-in-One Map Viewer</b></div>
+    <div class="row" style="margin-top:6px">
+      <label for="mapSel">Map:</label>
+      <select id="mapSel">
+        <option value="map.json">map.json</option>
+        <option value="small_maze.json">small_maze.json</option>
+        <option value="arena.json">arena.json</option>
+        <option value="corridors.json">corridors.json</option>
+        <option value="w3d_like.json">w3d_like.json (inspired)</option>
+        <option value="doom_like.json">doom_like.json (inspired)</option>
+        <option value="wolf_e1f1_like.json">wolf_e1f1_like.json (W3D E1F1 inspired)</option>
+        <option value="wolf_e1f2_like.json">wolf_e1f2_like.json (W3D E1F2 inspired)</option>
+        <option value="tex_arena.json">tex_arena.json</option>
+        <option value="tex_maze.json">tex_maze.json</option>
+      </select>
+      <input id="useTex" type="checkbox" checked />
+      <label for="useTex">Texturen verwenden, wenn vorhanden</label>
+      <a class="btn" id="dl" href="#" download>Map herunterladen</a>
+    </div>
+    <div style="margin-top:6px">Orbit: LMB • Zoom: Wheel • Pan: RMB</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ---------- Utils ----------
+    async function loadMap(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Konnte Map nicht laden: ' + res.status);
+      return res.json();
+    }
+
+    function groupById(layerArray, cols, rows) {
+      const groups = new Map();
+      for (let idx=0, n=layerArray?.length||0; idx<n; idx++) {
+        const id = layerArray[idx]|0;
+        if (id<=0) continue;
+        if (!groups.has(id)) groups.set(id, []);
+        groups.get(id).push(idx);
+      }
+      return groups;
+    }
+
+    function makeInstancedForIndices(indices, cols, rows, tileSize, material, heightScale, epsilon=0.0005) {
+      const geom = new THREE.BoxGeometry(tileSize, tileSize * heightScale, tileSize);
+      const mesh = new THREE.InstancedMesh(geom, material, indices.length);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      const dummy = new THREE.Object3D();
+
+      const halfW = cols * tileSize * 0.5;
+      const halfH = rows * tileSize * 0.5;
+
+      for (let i=0; i<indices.length; i++) {
+        const idx = indices[i];
+        const x = idx % cols;
+        const y = Math.floor(idx / cols);
+        const cx = x*tileSize + tileSize*0.5 - halfW;
+        const cz = y*tileSize + tileSize*0.5 - halfH;
+        const cy = (tileSize * heightScale) * 0.5;
+        // Epsilon hebt die Instanzen minimal an, um Z-Fighting zu vermeiden
+        dummy.position.set(cx, cy + epsilon*tileSize, cz);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(1,1,1);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      return mesh;
+    }
+
+    function createRenderer() {
+      const app = document.getElementById('app');
+      const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      app.innerHTML = '';
+      app.appendChild(renderer.domElement);
+      return renderer;
+    }
+
+    // ---------- Scene ----------
+    const renderer = createRenderer();
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0f14);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+    camera.position.set(10, 14, 16);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 0.4, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(4, 8, 2);
+    scene.add(dir);
+
+    const grid = new THREE.GridHelper(200, 200, 0x335577, 0x223344);
+    grid.position.y = 0.001; // leicht anheben (Z-Fighting vermeiden)
+    scene.add(grid);
+
+    let layerMeshes = [];
+    function clearLayerMeshes() {
+      for (const m of layerMeshes) {
+        if (m.geometry) m.geometry.dispose?.();
+        if (m.material) {
+          if (Array.isArray(m.material)) m.material.forEach(mm => mm.dispose?.());
+          else m.material.dispose?.();
+        }
+        scene.remove(m);
+      }
+      layerMeshes = [];
+    }
+
+    // ---------- Materials / Textures ----------
+    const materialCache = new Map();
+    function textureMaterial(url) {
+      if (materialCache.has(url)) return materialCache.get(url);
+      const tex = new THREE.TextureLoader().load(url);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, metalness: 0.0 });
+      materialCache.set(url, mat);
+      return mat;
+    }
+
+    const matFloorSolid = new THREE.MeshStandardMaterial({ color: 0x4fa16f, roughness: 0.95, metalness: 0.0 });
+    const matWallSolid  = new THREE.MeshStandardMaterial({ color: 0x7a8aa1, roughness: 0.8,  metalness: 0.0 });
+    const matDecoSolid  = new THREE.MeshStandardMaterial({ color: 0xd8a657, roughness: 0.8,  metalness: 0.0 });
+
+    function materialFor(tileId, mats, useTextures, fallbackMat) {
+      if (useTextures && mats && mats[String(tileId)]?.url) {
+        return textureMaterial(mats[String(tileId)].url);
+      }
+      return fallbackMat;
+    }
+
+    // ---------- Build ----------
+    function buildSceneFromMap(map, useTextures) {
+      clearLayerMeshes();
+
+      const world = map.sections.world;
+      const tiles = map.sections.tiles;
+      const mats  = map.sections.materials?.tileset || null;
+      const cols = tiles.cols|0;
+      const rows = tiles.rows|0;
+      const tileSize = (world.tileSize ?? 1.0);
+
+      const L0 = tiles.levels[0];
+      const layerConfigs = [
+        { name:'floor', height:0.12, fallback:matFloorSolid },
+        { name:'wall',  height:1.0,  fallback:matWallSolid  },
+        { name:'deco',  height:0.5,  fallback:matDecoSolid  }
+      ];
+
+      for (const cfg of layerConfigs) {
+        const arr = L0.layers[cfg.name];
+        if (!arr) continue;
+
+        if (useTextures && mats) {
+          // Gruppiere pro ID -> eigenes InstancedMesh/Material
+          const groups = groupById(arr, cols, rows);
+          for (const [tileId, indices] of groups.entries()) {
+            const mat = materialFor(tileId, mats, true, cfg.fallback);
+            const mesh = makeInstancedForIndices(indices, cols, rows, tileSize, mat, cfg.height);
+            scene.add(mesh);
+            layerMeshes.push(mesh);
+          }
+        } else {
+          // Ohne Texturen als eine Gruppe (alle IDs gleicher Layer)
+          const indices = [];
+          for (let i=0, n=arr.length; i<n; i++) if ((arr[i]|0)>0) indices.push(i);
+          if (indices.length) {
+            const mesh = makeInstancedForIndices(indices, cols, rows, tileSize, cfg.fallback, cfg.height);
+            scene.add(mesh);
+            layerMeshes.push(mesh);
+          }
+        }
+      }
+
+      // Ground plane: leicht absenken & polygonOffset gegen Z-Fighting
+      const planeGeo = new THREE.PlaneGeometry(cols*tileSize, rows*tileSize);
+      const planeMat = new THREE.MeshStandardMaterial({
+        color: 0x10161e, roughness: 1, metalness: 0,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
+      });
+      const plane = new THREE.Mesh(planeGeo, planeMat);
+      plane.rotation.x = -Math.PI/2;
+      plane.position.y = -0.002 * tileSize;
+      scene.add(plane);
+      layerMeshes.push(plane);
+
+      // Kamera an Mapgröße anpassen
+      const fit = Math.max(10, Math.max(cols, rows) * 0.6);
+      controls.target.set(0, 0.4, 0);
+      camera.position.set(fit, fit*0.9, fit);
+      camera.lookAt(0,0,0);
+    }
+
+    async function loadAndBuild(url, useTextures) {
+      const map = await loadMap(url);
+      buildSceneFromMap(map, useTextures);
+      const dl = document.getElementById('dl');
+      dl.href = url;
+      dl.download = url.split('/').pop();
+    }
+
+    // ---------- Loop & UI ----------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function loop() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    const sel = document.getElementById('mapSel');
+    const chk = document.getElementById('useTex');
+    function refresh() { loadAndBuild(sel.value, chk.checked); }
+    sel.addEventListener('change', refresh);
+    chk.addEventListener('change', refresh);
+    // initial
+    refresh();
+  </script>
+</body>
+</html>

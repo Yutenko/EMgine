@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Renderer · ES5 Plugins + latest three</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0f14; color: #eee; font-family: system-ui, sans-serif; }
+    #app  { position: fixed; inset: 0; }
+    #hud  { position: fixed; left: 12px; top: 12px; background: rgba(0,0,0,.45); padding: 10px 12px; border-radius: 10px; backdrop-filter: blur(6px); }
+    #hud b { color: #b6f; }
+    a.btn { display:inline-block; margin-left:8px; padding: 6px 10px; border-radius:8px; background:#1e2633; color:#9cf; text-decoration:none; }
+    select, input[type="checkbox"] { background:#0f1622; color:#dbe9ff; border:1px solid #28374d; padding:4px 8px; border-radius:8px; }
+    label { font-size:12px; opacity:.9; margin-left:6px; user-select:none; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    const THREE_NS = Object.create(null);
+    for (const k of Object.getOwnPropertyNames(THREE)) THREE_NS[k] = THREE[k];
+    THREE_NS.OrbitControls = OrbitControls;
+    window.THREE = THREE_NS;
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      boot();
+    }
+  </script>
+
+  <script src="./core/core-base.js"></script>
+  <script src="./core/core-renderer.js"></script>
+
+  <script src="./plugins/app-three.js"></script>
+  <script src="./plugins/camera-orbit.js"></script>
+  <script src="./plugins/lights-grid.js"></script>
+  <script src="./plugins/materials.js"></script>
+  <script src="./plugins/map-loader.js"></script>
+  <script src="./plugins/build-floor.js"></script>
+  <script src="./plugins/build-walls.js"></script>
+  <script src="./plugins/build-deco.js"></script>
+  <script src="./plugins/perimeter-skirt.js"></script>
+
+  <script>
+    function boot() {
+      if (!window.THREE) { return setTimeout(boot, 0); }
+
+      var root = document.getElementById('app');
+      var app = createRendererApp(root, {});
+      window.app3d = app;
+
+      var sel = document.getElementById('mapSel');
+      var tex = document.getElementById('useTex');
+      var dl  = document.getElementById('dl');
+
+      function refresh() {
+        var url = sel.value;
+        app.loadAndBuild(url, tex.checked);
+        dl.href = url;
+        dl.download = url.split('/').pop();
+      }
+
+      sel.addEventListener('change', refresh);
+      tex.addEventListener('change', refresh);
+      refresh();
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div><b>3D Renderer – use(plugin)</b></div>
+    <div class="row" style="margin-top:6px">
+      <label for="mapSel">Map:</label>
+      <select id="mapSel">
+        <option value="small_maze.json">small_maze.json</option>
+        <option value="arena.json">arena.json</option>
+        <option value="corridors.json">corridors.json</option>
+        <option value="w3d_like.json">w3d_like.json</option>
+        <option value="doom_like.json">doom_like.json</option>
+        <option value="wolf_e1f1_like.json">wolf_e1f1_like.json</option>
+        <option value="wolf_e1f2_like.json">wolf_e1f2_like.json</option>
+        <option value="tex_arena.json">tex_arena.json</option>
+        <option value="tex_maze.json">tex_maze.json</option>
+      </select>
+      <input id="useTex" type="checkbox" checked />
+      <label for="useTex">Texturen verwenden (falls vorhanden)</label>
+      <a class="btn" id="dl" href="#" download>Map herunterladen</a>
+    </div>
+    <div style="margin-top:6px">Orbit: LMB • Zoom: Wheel • Pan: RMB</div>
+  </div>
+</body>
+</html>

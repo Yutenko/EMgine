@@ -25,6 +25,7 @@
   <script src="core/core-levels.js"></script>
   <script src="core/core-chunks.js"></script>
   <script src="core/core-underlay.js"></script>
+  <script src="core/core-export.js"></script>
 
   <!-- Core-Tools (UI-agnostisch) -->
   <script src="core/core-tool-paint.js"></script>
@@ -78,6 +79,7 @@
           .use(EditorLevels)
           .use(EditorChunks)
           .use(EditorUnderlay)
+          .use(EditorExportPlugin)
 
           // Tools (UI-agnostisch): deine Svelte-UI ruft deren API auf
           .use(EditorToolPaint)
